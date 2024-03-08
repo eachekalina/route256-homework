@@ -8,11 +8,13 @@ import (
 	"os"
 )
 
+// FileStorage provides a storage with a JSON file as a backend.
 type FileStorage struct {
 	orders   map[uint64]model.Order
 	filepath string
 }
 
+// NewFileStorage returns a new FileStorage with file stored in the provided path.
 func NewFileStorage(path string) (FileStorage, error) {
 	file, err := os.OpenFile(path, os.O_CREATE, 0777)
 	if err != nil {
@@ -38,6 +40,7 @@ func NewFileStorage(path string) (FileStorage, error) {
 	return FileStorage{orders: orders, filepath: path}, nil
 }
 
+// Save saves cached order information into file.
 func (s *FileStorage) Save() error {
 	bytes, err := json.Marshal(s.orders)
 	if err != nil {
@@ -50,6 +53,7 @@ func (s *FileStorage) Save() error {
 	return nil
 }
 
+// Create creaes a new order.
 func (s *FileStorage) Create(order model.Order) error {
 	for _, savedOrder := range s.orders {
 		if order.Id == savedOrder.Id {
@@ -60,6 +64,7 @@ func (s *FileStorage) Create(order model.Order) error {
 	return nil
 }
 
+// List returns a slice of all orders stored.
 func (s *FileStorage) List() []model.Order {
 	slice := make([]model.Order, len(s.orders))
 	for _, order := range s.orders {
@@ -68,6 +73,7 @@ func (s *FileStorage) List() []model.Order {
 	return slice
 }
 
+// Get returns the order represented by id.
 func (s *FileStorage) Get(id uint64) (model.Order, error) {
 	if order, found := s.orders[id]; found {
 		return order, nil
@@ -75,6 +81,7 @@ func (s *FileStorage) Get(id uint64) (model.Order, error) {
 	return model.Order{}, errors.New("no such order found")
 }
 
+// Update sets the parameters of an order to those provided.
 func (s *FileStorage) Update(order model.Order) error {
 	for i, savedOrder := range s.orders {
 		if order.Id == savedOrder.Id {
@@ -85,6 +92,7 @@ func (s *FileStorage) Update(order model.Order) error {
 	return errors.New("no such order found")
 }
 
+// Delete deletes an order.
 func (s *FileStorage) Delete(id uint64) error {
 	for _, savedOrder := range s.orders {
 		if id == savedOrder.Id {

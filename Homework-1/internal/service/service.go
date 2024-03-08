@@ -15,14 +15,17 @@ type storage interface {
 	Delete(id uint64) error
 }
 
+// Service provides methods to work with orders.
 type Service struct {
 	s storage
 }
 
-func New(s storage) Service {
+// NewService creates a new Service.
+func NewService(s storage) Service {
 	return Service{s: s}
 }
 
+// AddOrder creates a new order with provided orderId, customerId and keepDate.
 func (s *Service) AddOrder(orderId uint64, customerId uint64, keepDate time.Time) error {
 	now := time.Now()
 	if keepDate.Before(now) {
@@ -44,12 +47,13 @@ func (s *Service) AddOrder(orderId uint64, customerId uint64, keepDate time.Time
 	return nil
 }
 
+// RemoveOrder removes order associated with provided orderId.
 func (s *Service) RemoveOrder(orderId uint64) error {
 	order, err := s.s.Get(orderId)
 	if err != nil {
 		return err
 	}
-	if order.IsGiven {
+	if order.IsGiven && !order.IsReturned {
 		return errors.New("order has already been given to customer")
 	}
 	now := time.Now()
@@ -60,6 +64,7 @@ func (s *Service) RemoveOrder(orderId uint64) error {
 	return err
 }
 
+// GiveOrders marks orders represented by provided ids as given to customer.
 func (s *Service) GiveOrders(orderIds []uint64) error {
 	orders := make([]model.Order, len(orderIds))
 	now := time.Now()
@@ -67,7 +72,10 @@ func (s *Service) GiveOrders(orderIds []uint64) error {
 	for i, id := range orderIds {
 		order, err := s.s.Get(id)
 		if err != nil {
-			return nil
+			return err
+		}
+		if order.IsGiven {
+			return errors.New("order has already been given")
 		}
 		if order.KeepDate.Before(now) {
 			return errors.New("keep date has already expired")
@@ -90,6 +98,7 @@ func (s *Service) GiveOrders(orderIds []uint64) error {
 	return nil
 }
 
+// GetOrders returns slice of orders belonging to customer with provided customerId.
 func (s *Service) GetOrders(customerId uint64, n int, filterGiven bool) ([]model.Order, error) {
 	if n < 0 {
 		return nil, errors.New("n must not be negative")
@@ -97,7 +106,7 @@ func (s *Service) GetOrders(customerId uint64, n int, filterGiven bool) ([]model
 	l := s.s.List()
 	orders := make([]model.Order, 0)
 	for _, order := range l {
-		if filterGiven && order.IsGiven {
+		if filterGiven && order.IsGiven && !order.IsReturned {
 			continue
 		}
 		if order.CustomerId != customerId {
@@ -114,12 +123,13 @@ func (s *Service) GetOrders(customerId uint64, n int, filterGiven bool) ([]model
 		}
 		return 0
 	})
-	if n > 0 {
+	if n > 0 && n < len(orders) {
 		orders = orders[:n]
 	}
 	return orders, nil
 }
 
+// AcceptReturn marks order as returned by customer.
 func (s *Service) AcceptReturn(orderId uint64, customerId uint64) error {
 	order, err := s.s.Get(orderId)
 	if err != nil {
@@ -128,11 +138,11 @@ func (s *Service) AcceptReturn(orderId uint64, customerId uint64) error {
 	if order.CustomerId != customerId {
 		return errors.New("order does not belong to customer")
 	}
-	if !order.IsReturned {
+	if !order.IsGiven {
 		return errors.New("order was not given")
 	}
 	now := time.Now()
-	returnExpirationDate := order.ReturnDate.AddDate(0, 0, 2)
+	returnExpirationDate := order.GiveDate.AddDate(0, 0, 2)
 	if returnExpirationDate.Before(now) {
 		return errors.New("too much time passed since give")
 	}
@@ -145,6 +155,7 @@ func (s *Service) AcceptReturn(orderId uint64, customerId uint64) error {
 	return nil
 }
 
+// GetReturns returns a slice of orders which were returned by customer.
 func (s *Service) GetReturns(count int, pageNum int) ([]model.Order, error) {
 	if count <= 0 {
 		return nil, errors.New("invalid count of items on page")
@@ -174,6 +185,9 @@ func (s *Service) GetReturns(count int, pageNum int) ([]model.Order, error) {
 	}
 	if pageNum*count >= len(orders) {
 		return nil, errors.New("page number is too large")
+	}
+	if (pageNum+1)*count > len(orders) {
+		return orders[pageNum*count:], nil
 	}
 	return orders[pageNum*count : (pageNum+1)*count], nil
 }

@@ -2,6 +2,7 @@ package model
 
 import "time"
 
+// Order contains fields relevant to an order.
 type Order struct {
 	GiveDate   time.Time `json:"give_date"`
 	ReturnDate time.Time `json:"return_date"`
