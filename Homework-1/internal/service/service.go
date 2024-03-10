@@ -17,29 +17,33 @@ type storage interface {
 
 // Service provides methods to work with orders.
 type Service struct {
-	s storage
+	stor storage
 }
 
 // NewService creates a new Service.
 func NewService(s storage) Service {
-	return Service{s: s}
+	return Service{stor: s}
 }
 
 // AddOrder creates a new order with provided orderId, customerId and keepDate.
 func (s *Service) AddOrder(orderId uint64, customerId uint64, keepDate time.Time) error {
+	if orderId == 0 {
+		return errors.New("valid order id is required")
+	}
+	if customerId == 0 {
+		return errors.New("valid customer id is required")
+	}
+	keepYear, keepMonth, keepDay := keepDate.Date()
+	keepDate = time.Date(keepYear, keepMonth, keepDay, 23, 59, 59, 0, time.Local)
 	now := time.Now()
 	if keepDate.Before(now) {
 		return errors.New("keepDate can't be in the past")
 	}
-	err := s.s.Create(model.Order{
-		GiveDate:   time.Time{},
-		ReturnDate: time.Time{},
+	err := s.stor.Create(model.Order{
 		KeepDate:   keepDate,
 		AddDate:    now,
 		Id:         orderId,
 		CustomerId: customerId,
-		IsGiven:    false,
-		IsReturned: false,
 	})
 	if err != nil {
 		return err
@@ -49,18 +53,20 @@ func (s *Service) AddOrder(orderId uint64, customerId uint64, keepDate time.Time
 
 // RemoveOrder removes order associated with provided orderId.
 func (s *Service) RemoveOrder(orderId uint64) error {
-	order, err := s.s.Get(orderId)
+	if orderId == 0 {
+		return errors.New("valid order id is required")
+	}
+	order, err := s.stor.Get(orderId)
 	if err != nil {
 		return err
 	}
 	if order.IsGiven && !order.IsReturned {
 		return errors.New("order has already been given to customer")
 	}
-	now := time.Now()
-	if order.KeepDate.After(now) {
+	if order.KeepDate.After(time.Now()) {
 		return errors.New("keep date has not arrived yet")
 	}
-	err = s.s.Delete(orderId)
+	err = s.stor.Delete(orderId)
 	return err
 }
 
@@ -70,7 +76,7 @@ func (s *Service) GiveOrders(orderIds []uint64) error {
 	now := time.Now()
 	var customerId uint64
 	for i, id := range orderIds {
-		order, err := s.s.Get(id)
+		order, err := s.stor.Get(id)
 		if err != nil {
 			return err
 		}
@@ -90,7 +96,7 @@ func (s *Service) GiveOrders(orderIds []uint64) error {
 	for _, order := range orders {
 		order.IsGiven = true
 		order.GiveDate = now
-		err := s.s.Update(order)
+		err := s.stor.Update(order)
 		if err != nil {
 			return err
 		}
@@ -100,10 +106,13 @@ func (s *Service) GiveOrders(orderIds []uint64) error {
 
 // GetOrders returns slice of orders belonging to customer with provided customerId.
 func (s *Service) GetOrders(customerId uint64, n int, filterGiven bool) ([]model.Order, error) {
+	if customerId == 0 {
+		return nil, errors.New("valid customer id is required")
+	}
 	if n < 0 {
 		return nil, errors.New("n must not be negative")
 	}
-	l := s.s.List()
+	l := s.stor.List()
 	orders := make([]model.Order, 0)
 	for _, order := range l {
 		if filterGiven && order.IsGiven && !order.IsReturned {
@@ -131,7 +140,13 @@ func (s *Service) GetOrders(customerId uint64, n int, filterGiven bool) ([]model
 
 // AcceptReturn marks order as returned by customer.
 func (s *Service) AcceptReturn(orderId uint64, customerId uint64) error {
-	order, err := s.s.Get(orderId)
+	if orderId == 0 {
+		return errors.New("valid order id is required")
+	}
+	if customerId == 0 {
+		return errors.New("valid customer id is required")
+	}
+	order, err := s.stor.Get(orderId)
 	if err != nil {
 		return err
 	}
@@ -141,6 +156,9 @@ func (s *Service) AcceptReturn(orderId uint64, customerId uint64) error {
 	if !order.IsGiven {
 		return errors.New("order was not given")
 	}
+	if order.IsReturned {
+		return errors.New("order was already returned")
+	}
 	now := time.Now()
 	returnExpirationDate := order.GiveDate.AddDate(0, 0, 2)
 	if returnExpirationDate.Before(now) {
@@ -148,11 +166,7 @@ func (s *Service) AcceptReturn(orderId uint64, customerId uint64) error {
 	}
 	order.IsReturned = true
 	order.ReturnDate = now
-	err = s.s.Update(order)
-	if err != nil {
-		return err
-	}
-	return nil
+	return s.stor.Update(order)
 }
 
 // GetReturns returns a slice of orders which were returned by customer.
@@ -163,7 +177,7 @@ func (s *Service) GetReturns(count int, pageNum int) ([]model.Order, error) {
 	if pageNum < 0 {
 		return nil, errors.New("invalid page number")
 	}
-	l := s.s.List()
+	l := s.stor.List()
 	orders := make([]model.Order, 0)
 	for _, order := range l {
 		if !order.IsReturned {

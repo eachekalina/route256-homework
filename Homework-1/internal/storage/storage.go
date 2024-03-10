@@ -12,11 +12,14 @@ import (
 type FileStorage struct {
 	orders   map[uint64]model.Order
 	filepath string
+	changed  bool
 }
+
+const filePerm = 0777
 
 // NewFileStorage returns a new FileStorage with file stored in the provided path.
 func NewFileStorage(path string) (FileStorage, error) {
-	file, err := os.OpenFile(path, os.O_CREATE, 0777)
+	file, err := os.OpenFile(path, os.O_CREATE, filePerm)
 	if err != nil {
 		return FileStorage{}, err
 	}
@@ -40,27 +43,30 @@ func NewFileStorage(path string) (FileStorage, error) {
 	return FileStorage{orders: orders, filepath: path}, nil
 }
 
-// Save saves cached order information into file.
-func (s *FileStorage) Save() error {
+// Close saves cached order information into file when needed.
+func (s *FileStorage) Close() error {
+	if !s.changed {
+		return nil
+	}
 	bytes, err := json.Marshal(s.orders)
 	if err != nil {
 		return err
 	}
-	err = os.WriteFile(s.filepath, bytes, 0777)
+	err = os.WriteFile(s.filepath, bytes, filePerm)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-// Create creaes a new order.
+// Create creates a new order.
 func (s *FileStorage) Create(order model.Order) error {
-	for _, savedOrder := range s.orders {
-		if order.Id == savedOrder.Id {
-			return errors.New("order with such id already exists")
-		}
+	_, exists := s.orders[order.Id]
+	if exists {
+		return errors.New("order with such id already exists")
 	}
 	s.orders[order.Id] = order
+	s.changed = true
 	return nil
 }
 
@@ -86,6 +92,7 @@ func (s *FileStorage) Update(order model.Order) error {
 	for i, savedOrder := range s.orders {
 		if order.Id == savedOrder.Id {
 			s.orders[i] = order
+			s.changed = true
 			return nil
 		}
 	}
@@ -97,6 +104,7 @@ func (s *FileStorage) Delete(id uint64) error {
 	for _, savedOrder := range s.orders {
 		if id == savedOrder.Id {
 			delete(s.orders, savedOrder.Id)
+			s.changed = true
 			return nil
 		}
 	}

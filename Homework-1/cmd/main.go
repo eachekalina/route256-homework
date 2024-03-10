@@ -7,6 +7,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"log"
 	"os"
 	"strconv"
 	"text/tabwriter"
@@ -18,27 +19,45 @@ const FILEPATH = "orders.json"
 func main() {
 	err := run()
 	if err != nil {
-		_, _ = fmt.Fprintf(os.Stderr, "%v\n", err)
-		os.Exit(1)
+		log.Fatal(err)
 	}
 }
 
-func run() error {
+type flags struct {
+	orderId         uint64
+	customerId      uint64
+	keepDateString  string
+	numberOfEntries int
+	storedOnly      bool
+	page            int
+}
+
+func initArgs() (cmd string, args []string, f flags, err error) {
 	fs := flag.NewFlagSet("", flag.ExitOnError)
 	fs.Usage = printHelp
-	orderId := fs.Uint64("order-id", 0, "specify order id")
-	customerId := fs.Uint64("customer-id", 0, "specify customer id")
-	keepDateString := fs.String("keep-date", "", "specify keep date")
-	numberOfEntries := fs.Int("n", 0, "specify number of entries")
-	storedOnly := fs.Bool("stored-only", false, "display only stored orders")
-	page := fs.Int("page", 0, "specify page")
+	fs.Uint64Var(&f.orderId, "order-id", 0, "specify order id")
+	fs.Uint64Var(&f.customerId, "customer-id", 0, "specify customer id")
+	fs.StringVar(&f.keepDateString, "keep-date", "", "specify keep date")
+	fs.IntVar(&f.numberOfEntries, "n", 0, "specify number of entries")
+	fs.BoolVar(&f.storedOnly, "stored-only", false, "display only stored orders")
+	fs.IntVar(&f.page, "page", 0, "specify page")
 
 	if len(os.Args) < 2 {
-		return errors.New("subcommand is required, see `help` subcommand for details")
+		return "", nil, flags{}, errors.New("subcommand is required, see `help` subcommand for details")
 	}
-	cmd := os.Args[1]
-	args := os.Args[2:]
-	err := fs.Parse(args)
+	cmd = os.Args[1]
+	args = os.Args[2:]
+	err = fs.Parse(args)
+	if err != nil {
+		return "", nil, flags{}, err
+	}
+	return cmd, args, f, nil
+}
+
+const dateFormat = "2006-01-02"
+
+func run() error {
+	cmd, args, f, err := initArgs()
 	if err != nil {
 		return err
 	}
@@ -48,92 +67,27 @@ func run() error {
 		return err
 	}
 	serv := service.NewService(&stor)
+	defer stor.Close()
 
 	switch cmd {
 	case "help":
 		printHelp()
+		return nil
 	case "accept-order":
-		if *orderId == 0 {
-			return errors.New("valid order id is required")
-		}
-		if *customerId == 0 {
-			return errors.New("valid customer id is required")
-		}
-		if *keepDateString == "" {
-			return errors.New("keep date is required")
-		}
-		keepDate, err := time.Parse("2006-01-02", *keepDateString)
-		keepYear, keepMonth, keepDay := keepDate.Date()
-		keepDate = time.Date(keepYear, keepMonth, keepDay, 23, 59, 59, 0, time.Local)
-		if err != nil {
-			return err
-		}
-		err = serv.AddOrder(*orderId, *customerId, keepDate)
-		if err != nil {
-			return err
-		}
+		return acceptOrder(f, serv)
 	case "return-order":
-		if *orderId == 0 {
-			return errors.New("valid order id is required")
-		}
-		err := serv.RemoveOrder(*orderId)
-		if err != nil {
-			return err
-		}
+		return returnOrder(f, serv)
 	case "give-orders":
-		orderIds := make([]uint64, len(args))
-		for i, arg := range args {
-			orderIds[i], err = strconv.ParseUint(arg, 10, 64)
-			if err != nil {
-				return err
-			}
-		}
-		err := serv.GiveOrders(orderIds)
-		if err != nil {
-			return err
-		}
+		return giveOrders(args, serv)
 	case "list-orders":
-		if *customerId == 0 {
-			return errors.New("valid customer id is required")
-		}
-		orders, err := serv.GetOrders(*customerId, *numberOfEntries, *storedOnly)
-		if err != nil {
-			return err
-		}
-		if len(orders) == 0 {
-			fmt.Println("No orders are to display")
-			break
-		}
-		printOrders(orders)
+		return listOrders(f, serv)
 	case "accept-return":
-		if *orderId == 0 {
-			return errors.New("valid order id is required")
-		}
-		if *customerId == 0 {
-			return errors.New("valid customer id is required")
-		}
-		err := serv.AcceptReturn(*orderId, *customerId)
-		if err != nil {
-			return err
-		}
+		return acceptReturn(f, serv)
 	case "list-returns":
-		orders, err := serv.GetReturns(*numberOfEntries, *page)
-		if err != nil {
-			return err
-		}
-		if len(orders) == 0 {
-			fmt.Println("No returns are available")
-			break
-		}
-		printOrders(orders)
+		return listReturns(serv, f)
 	default:
 		return errors.New("not such subcommand, see `help` subcommand for details")
 	}
-	err = stor.Save()
-	if err != nil {
-		return err
-	}
-	return nil
 }
 
 func printHelp() {
@@ -172,6 +126,63 @@ func printHelp() {
 		--page			specify page number, starting with 0`)
 }
 
+func acceptOrder(f flags, serv service.Service) error {
+	if f.keepDateString == "" {
+		return errors.New("keep date is required")
+	}
+	keepDate, err := time.Parse(dateFormat, f.keepDateString)
+	if err != nil {
+		return err
+	}
+	return serv.AddOrder(f.orderId, f.customerId, keepDate)
+}
+
+func returnOrder(f flags, serv service.Service) error {
+	return serv.RemoveOrder(f.orderId)
+}
+
+func giveOrders(args []string, serv service.Service) error {
+	orderIds := make([]uint64, len(args))
+	for i, arg := range args {
+		var err error
+		orderIds[i], err = strconv.ParseUint(arg, 10, 64)
+		if err != nil {
+			return err
+		}
+	}
+	return serv.GiveOrders(orderIds)
+}
+
+func listOrders(f flags, serv service.Service) error {
+	orders, err := serv.GetOrders(f.customerId, f.numberOfEntries, f.storedOnly)
+	if err != nil {
+		return err
+	}
+	if len(orders) == 0 {
+		fmt.Println("No orders are to display")
+		return nil
+	}
+	printOrders(orders)
+	return nil
+}
+
+func acceptReturn(f flags, serv service.Service) error {
+	return serv.AcceptReturn(f.orderId, f.customerId)
+}
+
+func listReturns(serv service.Service, f flags) error {
+	orders, err := serv.GetReturns(f.numberOfEntries, f.page)
+	if err != nil {
+		return err
+	}
+	if len(orders) == 0 {
+		fmt.Println("No returns are available")
+		return nil
+	}
+	printOrders(orders)
+	return nil
+}
+
 func printOrders(orders []model.Order) {
 	w := tabwriter.NewWriter(os.Stdout, 0, 4, 2, ' ', 0)
 	fmt.Fprintf(
@@ -186,25 +197,7 @@ func printOrders(orders []model.Order) {
 		"Is returned",
 		"Return date")
 	for _, order := range orders {
-		displayedGiveDate := "-"
-		if order.IsGiven {
-			displayedGiveDate = order.GiveDate.Format("2006-01-02")
-		}
-		displayedReturnDate := "-"
-		if order.IsReturned {
-			displayedReturnDate = order.ReturnDate.Format("2006-01-02")
-		}
-		fmt.Fprintf(
-			w,
-			"%d\t%d\t%s\t%s\t%t\t%s\t%t\t%s\n",
-			order.Id,
-			order.CustomerId,
-			order.AddDate.Format("2006-01-02"),
-			order.KeepDate.Format("2006-01-02"),
-			order.IsGiven,
-			displayedGiveDate,
-			order.IsReturned,
-			displayedReturnDate)
+		fmt.Fprintln(w, order)
 	}
 	w.Flush()
 }
