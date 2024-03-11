@@ -89,14 +89,12 @@ func (s *FileStorage) Get(id uint64) (model.Order, error) {
 
 // Update sets the parameters of an order to those provided.
 func (s *FileStorage) Update(order model.Order) error {
-	for i, savedOrder := range s.orders {
-		if order.Id == savedOrder.Id {
-			s.orders[i] = order
-			s.changed = true
-			return nil
-		}
+	_, found := s.orders[order.Id]
+	if !found {
+		return errors.New("no such order found")
 	}
-	return errors.New("no such order found")
+	s.orders[order.Id] = order
+	return nil
 }
 
 // Delete deletes an order.
