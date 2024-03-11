@@ -1,9 +1,9 @@
 package storage
 
 import (
-	"Homework-1/internal/model"
 	"encoding/json"
 	"errors"
+	"homework/internal/model"
 	"io"
 	"os"
 )

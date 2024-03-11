@@ -1,8 +1,8 @@
 package service
 
 import (
-	"Homework-1/internal/model"
 	"errors"
+	"homework/internal/model"
 	"slices"
 	"time"
 )

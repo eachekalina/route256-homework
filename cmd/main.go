@@ -1,12 +1,12 @@
 package main
 
 import (
-	"Homework-1/internal/model"
-	"Homework-1/internal/service"
-	"Homework-1/internal/storage"
 	"errors"
 	"flag"
 	"fmt"
+	"homework/internal/model"
+	"homework/internal/service"
+	"homework/internal/storage"
 	"log"
 	"os"
 	"strconv"
