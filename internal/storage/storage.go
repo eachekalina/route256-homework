@@ -56,6 +56,7 @@ func (s *FileStorage) Close() error {
 	if err != nil {
 		return err
 	}
+	s.changed = false
 	return nil
 }
 
@@ -94,17 +95,17 @@ func (s *FileStorage) Update(order model.Order) error {
 		return errors.New("no such order found")
 	}
 	s.orders[order.Id] = order
+	s.changed = true
 	return nil
 }
 
 // Delete deletes an order.
 func (s *FileStorage) Delete(id uint64) error {
-	for _, savedOrder := range s.orders {
-		if id == savedOrder.Id {
-			delete(s.orders, savedOrder.Id)
-			s.changed = true
-			return nil
-		}
+	_, found := s.orders[id]
+	if !found {
+		return errors.New("no such order found")
 	}
-	return errors.New("no such order found")
+	delete(s.orders, id)
+	s.changed = true
+	return nil
 }
