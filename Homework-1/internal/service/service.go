@@ -33,8 +33,6 @@ func (s *Service) AddOrder(orderId uint64, customerId uint64, keepDate time.Time
 	if customerId == 0 {
 		return errors.New("valid customer id is required")
 	}
-	keepYear, keepMonth, keepDay := keepDate.Date()
-	keepDate = time.Date(keepYear, keepMonth, keepDay, 23, 59, 59, 0, time.Local)
 	now := time.Now()
 	if keepDate.Before(now) {
 		return errors.New("keepDate can't be in the past")

@@ -130,10 +130,11 @@ func acceptOrder(f flags, serv service.Service) error {
 	if f.keepDateString == "" {
 		return errors.New("keep date is required")
 	}
-	keepDate, err := time.Parse(dateFormat, f.keepDateString)
+	keepDate, err := time.ParseInLocation(dateFormat, f.keepDateString, time.Local)
 	if err != nil {
 		return err
 	}
+	keepDate = keepDate.Add(23*time.Hour + 59*time.Minute + 59*time.Second)
 	return serv.AddOrder(f.orderId, f.customerId, keepDate)
 }
 
