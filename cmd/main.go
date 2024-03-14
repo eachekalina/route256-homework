@@ -5,7 +5,8 @@ import (
 	"flag"
 	"fmt"
 	"homework/internal/model"
-	"homework/internal/service"
+	"homework/internal/orderservice"
+	"homework/internal/pickuppointcli"
 	"homework/internal/storage"
 	"log"
 	"os"
@@ -14,7 +15,8 @@ import (
 	"time"
 )
 
-const FILEPATH = "orders.json"
+const ORDERS_FILEPATH = "orders.json"
+const POINTS_FILEPATH = "points.json"
 
 func main() {
 	err := run()
@@ -62,17 +64,19 @@ func run() error {
 		return err
 	}
 
-	stor, err := storage.NewFileStorage(FILEPATH)
+	stor, err := storage.NewOrderFileStorage(ORDERS_FILEPATH)
 	if err != nil {
 		return err
 	}
-	serv := service.NewService(&stor)
+	serv := orderservice.NewOrderService(&stor)
 	defer stor.Close()
 
 	switch cmd {
 	case "help":
 		printHelp()
 		return nil
+	case "manage-pickup-points":
+		return managePickUpPoints()
 	case "accept-order":
 		return acceptOrder(f, serv)
 	case "return-order":
@@ -95,6 +99,9 @@ func printHelp() {
 
 	help
 		Show this help message
+
+	manage-pickup-points
+		Starts interactive mode for managing pick-up points
 
 	accept-order --order-id <order-id> --customer-id <customer-id> --keep-date <keep-date>
 		Accepts order from a courier
@@ -126,7 +133,15 @@ func printHelp() {
 		--page			specify page number, starting with 0`)
 }
 
-func acceptOrder(f flags, serv service.Service) error {
+func managePickUpPoints() error {
+	cli, err := pickuppointcli.NewPickUpPointCli(POINTS_FILEPATH)
+	if err != nil {
+		return err
+	}
+	return cli.Run()
+}
+
+func acceptOrder(f flags, serv orderservice.OrderService) error {
 	if f.keepDateString == "" {
 		return errors.New("keep date is required")
 	}
@@ -138,11 +153,11 @@ func acceptOrder(f flags, serv service.Service) error {
 	return serv.AddOrder(f.orderId, f.customerId, keepDate)
 }
 
-func returnOrder(f flags, serv service.Service) error {
+func returnOrder(f flags, serv orderservice.OrderService) error {
 	return serv.RemoveOrder(f.orderId)
 }
 
-func giveOrders(args []string, serv service.Service) error {
+func giveOrders(args []string, serv orderservice.OrderService) error {
 	orderIds := make([]uint64, len(args))
 	for i, arg := range args {
 		var err error
@@ -154,7 +169,7 @@ func giveOrders(args []string, serv service.Service) error {
 	return serv.GiveOrders(orderIds)
 }
 
-func listOrders(f flags, serv service.Service) error {
+func listOrders(f flags, serv orderservice.OrderService) error {
 	orders, err := serv.GetOrders(f.customerId, f.numberOfEntries, f.storedOnly)
 	if err != nil {
 		return err
@@ -167,11 +182,11 @@ func listOrders(f flags, serv service.Service) error {
 	return nil
 }
 
-func acceptReturn(f flags, serv service.Service) error {
+func acceptReturn(f flags, serv orderservice.OrderService) error {
 	return serv.AcceptReturn(f.orderId, f.customerId)
 }
 
-func listReturns(serv service.Service, f flags) error {
+func listReturns(serv orderservice.OrderService, f flags) error {
 	orders, err := serv.GetReturns(f.numberOfEntries, f.page)
 	if err != nil {
 		return err

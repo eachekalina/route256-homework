@@ -1,4 +1,4 @@
-package service
+package orderservice
 
 import (
 	"errors"
@@ -15,18 +15,18 @@ type storage interface {
 	Delete(id uint64) error
 }
 
-// Service provides methods to work with orders.
-type Service struct {
+// OrderService provides methods to work with orders.
+type OrderService struct {
 	stor storage
 }
 
-// NewService creates a new Service.
-func NewService(s storage) Service {
-	return Service{stor: s}
+// NewOrderService creates a new OrderService.
+func NewOrderService(s storage) OrderService {
+	return OrderService{stor: s}
 }
 
 // AddOrder creates a new order with provided orderId, customerId and keepDate.
-func (s *Service) AddOrder(orderId uint64, customerId uint64, keepDate time.Time) error {
+func (s *OrderService) AddOrder(orderId uint64, customerId uint64, keepDate time.Time) error {
 	if orderId == 0 {
 		return errors.New("valid order id is required")
 	}
@@ -50,7 +50,7 @@ func (s *Service) AddOrder(orderId uint64, customerId uint64, keepDate time.Time
 }
 
 // RemoveOrder removes order associated with provided orderId.
-func (s *Service) RemoveOrder(orderId uint64) error {
+func (s *OrderService) RemoveOrder(orderId uint64) error {
 	if orderId == 0 {
 		return errors.New("valid order id is required")
 	}
@@ -69,7 +69,7 @@ func (s *Service) RemoveOrder(orderId uint64) error {
 }
 
 // GiveOrders marks orders represented by provided ids as given to customer.
-func (s *Service) GiveOrders(orderIds []uint64) error {
+func (s *OrderService) GiveOrders(orderIds []uint64) error {
 	orders := make([]model.Order, len(orderIds))
 	now := time.Now()
 	var customerId uint64
@@ -103,7 +103,7 @@ func (s *Service) GiveOrders(orderIds []uint64) error {
 }
 
 // GetOrders returns slice of orders belonging to customer with provided customerId.
-func (s *Service) GetOrders(customerId uint64, n int, filterGiven bool) ([]model.Order, error) {
+func (s *OrderService) GetOrders(customerId uint64, n int, filterGiven bool) ([]model.Order, error) {
 	if customerId == 0 {
 		return nil, errors.New("valid customer id is required")
 	}
@@ -137,7 +137,7 @@ func (s *Service) GetOrders(customerId uint64, n int, filterGiven bool) ([]model
 }
 
 // AcceptReturn marks order as returned by customer.
-func (s *Service) AcceptReturn(orderId uint64, customerId uint64) error {
+func (s *OrderService) AcceptReturn(orderId uint64, customerId uint64) error {
 	if orderId == 0 {
 		return errors.New("valid order id is required")
 	}
@@ -168,7 +168,7 @@ func (s *Service) AcceptReturn(orderId uint64, customerId uint64) error {
 }
 
 // GetReturns returns a slice of orders which were returned by customer.
-func (s *Service) GetReturns(count int, pageNum int) ([]model.Order, error) {
+func (s *OrderService) GetReturns(count int, pageNum int) ([]model.Order, error) {
 	if count <= 0 {
 		return nil, errors.New("invalid count of items on page")
 	}
