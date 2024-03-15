@@ -1,22 +1,28 @@
 package main
 
 import (
+	"context"
 	"errors"
 	"flag"
 	"fmt"
+	"homework/internal/logger"
 	"homework/internal/model"
 	"homework/internal/orderservice"
 	"homework/internal/pickuppointcli"
+	service "homework/internal/pickuppointservice"
 	"homework/internal/storage"
 	"log"
 	"os"
+	"os/signal"
 	"strconv"
+	"syscall"
 	"text/tabwriter"
 	"time"
 )
 
 const ORDERS_FILEPATH = "orders.json"
 const POINTS_FILEPATH = "points.json"
+const DATE_FORMAT = "2006-01-02"
 
 func main() {
 	err := run()
@@ -55,8 +61,6 @@ func initArgs() (cmd string, args []string, f flags, err error) {
 	}
 	return cmd, args, f, nil
 }
-
-const dateFormat = "2006-01-02"
 
 func run() error {
 	cmd, args, f, err := initArgs()
@@ -134,18 +138,38 @@ func printHelp() {
 }
 
 func managePickUpPoints() error {
-	cli, err := pickuppointcli.NewPickUpPointCli(POINTS_FILEPATH)
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+
+	stor, err := storage.NewPickUpPointFileStorage(POINTS_FILEPATH)
 	if err != nil {
 		return err
 	}
-	return cli.Run()
+	defer stor.Close()
+	thrLog := logger.NewLogger()
+	defer thrLog.Close()
+	thrLog.Run()
+	serv := service.NewPickUpPointService(ctx, &stor, thrLog)
+	defer serv.Close()
+	cli, err := pickuppointcli.NewPickUpPointCli(serv)
+	if err != nil {
+		return err
+	}
+	go func() {
+		err := cli.Run(ctx)
+		if err != nil {
+			log.Println(err)
+		}
+		stop()
+	}()
+	<-ctx.Done()
+	return nil
 }
 
 func acceptOrder(f flags, serv orderservice.OrderService) error {
 	if f.keepDateString == "" {
 		return errors.New("keep date is required")
 	}
-	keepDate, err := time.ParseInLocation(dateFormat, f.keepDateString, time.Local)
+	keepDate, err := time.ParseInLocation(DATE_FORMAT, f.keepDateString, time.Local)
 	if err != nil {
 		return err
 	}

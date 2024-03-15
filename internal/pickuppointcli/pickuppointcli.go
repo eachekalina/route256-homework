@@ -2,16 +2,15 @@ package pickuppointcli
 
 import (
 	"bufio"
+	"context"
 	"errors"
 	"fmt"
 	"homework/internal/model"
 	service "homework/internal/pickuppointservice"
-	"homework/internal/storage"
 	"log"
 	"os"
 	"strconv"
 	"strings"
-	"text/tabwriter"
 )
 
 // PickUpPointCli provides a console line interface for working with pick-up points storage.
@@ -21,18 +20,13 @@ type PickUpPointCli struct {
 }
 
 // NewPickUpPointCli creates a new PickUpPointCli
-func NewPickUpPointCli(storagepath string) (*PickUpPointCli, error) {
-	stor, err := storage.NewPickUpPointFileStorage(storagepath)
-	if err != nil {
-		return nil, err
-	}
-	serv := service.NewPickUpPointService(&stor)
+func NewPickUpPointCli(serv *service.PickUpPointService) (*PickUpPointCli, error) {
+
 	return &PickUpPointCli{serv: serv, scanner: bufio.NewScanner(os.Stdin)}, nil
 }
 
 // Run starts the console line interface
-func (c *PickUpPointCli) Run() error {
-	defer c.serv.Close()
+func (c *PickUpPointCli) Run(ctx context.Context) error {
 	for {
 		exit, err := c.handleCommand()
 		if err != nil {
@@ -124,12 +118,12 @@ func (c *PickUpPointCli) handleCreate() (bool, error) {
 		Address: address,
 		Contact: contact,
 	}
-	return false, c.serv.CreatePoint(point)
+	c.serv.CreatePoint(point)
+	return false, nil
 }
 
 func (c *PickUpPointCli) handleList() {
-	points := c.serv.ListPoints()
-	printPoints(points)
+	c.serv.ListPoints()
 }
 
 func (c *PickUpPointCli) handleGet() (bool, error) {
@@ -137,11 +131,7 @@ func (c *PickUpPointCli) handleGet() (bool, error) {
 	if err != nil || exit {
 		return exit, err
 	}
-	point, err := c.serv.GetPoint(id)
-	if err != nil {
-		return false, err
-	}
-	printPoints([]model.PickUpPoint{point})
+	c.serv.GetPoint(id)
 	return false, nil
 }
 
@@ -168,7 +158,8 @@ func (c *PickUpPointCli) handleUpdate() (bool, error) {
 		Address: address,
 		Contact: contact,
 	}
-	return false, c.serv.UpdatePoint(point)
+	c.serv.UpdatePoint(point)
+	return false, nil
 }
 
 func (c *PickUpPointCli) handleDelete() (bool, error) {
@@ -176,20 +167,6 @@ func (c *PickUpPointCli) handleDelete() (bool, error) {
 	if err != nil || exit {
 		return exit, err
 	}
-	return false, c.serv.DeletePoint(id)
-}
-
-func printPoints(points []model.PickUpPoint) {
-	w := tabwriter.NewWriter(os.Stdout, 0, 4, 2, ' ', 0)
-	fmt.Fprintf(
-		w,
-		"%s\t%s\t%s\t%s\n",
-		"Id",
-		"Name",
-		"Address",
-		"Contact")
-	for _, point := range points {
-		fmt.Fprint(w, point)
-	}
-	w.Flush()
+	c.serv.DeletePoint(id)
+	return false, nil
 }

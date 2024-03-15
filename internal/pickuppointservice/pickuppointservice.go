@@ -1,6 +1,11 @@
 package pickuppointservice
 
-import "homework/internal/model"
+import (
+	"context"
+	"homework/internal/logger"
+	"homework/internal/model"
+	"sync"
+)
 
 type storage interface {
 	Close() error
@@ -11,130 +16,140 @@ type storage interface {
 	Delete(id uint64) error
 }
 
-type request[T any, R any] struct {
-	value  T
-	result chan R
-}
+const (
+	createReq = iota
+	listReq
+	getReq
+	updateReq
+	deleteReq
+)
 
-func newRequest[T any, R any](value T) request[T, R] {
-	return request[T, R]{
-		value:  value,
-		result: make(chan R),
-	}
-}
-
-type getResult struct {
-	point model.PickUpPoint
-	err   error
+type request struct {
+	reqType int
+	id      uint64
+	point   model.PickUpPoint
 }
 
 // PickUpPointService allows concurrent working on pick-up points.
 type PickUpPointService struct {
-	stor   storage
-	create chan request[model.PickUpPoint, error]
-	list   chan request[any, []model.PickUpPoint]
-	get    chan request[uint64, getResult]
-	update chan request[model.PickUpPoint, error]
-	delete chan request[uint64, error]
-	close  chan any
-	saved  chan any
+	stor  storage
+	log   *logger.Logger
+	read  chan request
+	write chan request
+	ctx   context.Context
+	close context.CancelFunc
+	wg    sync.WaitGroup
 }
 
 // NewPickUpPointService creates a new PickUpPointService.
-func NewPickUpPointService(stor storage) *PickUpPointService {
+func NewPickUpPointService(ctx context.Context, stor storage, log *logger.Logger) *PickUpPointService {
+	ctx, cancel := context.WithCancel(ctx)
 	s := &PickUpPointService{
-		stor:   stor,
-		create: make(chan request[model.PickUpPoint, error]),
-		list:   make(chan request[any, []model.PickUpPoint]),
-		get:    make(chan request[uint64, getResult]),
-		update: make(chan request[model.PickUpPoint, error]),
-		delete: make(chan request[uint64, error]),
-		close:  make(chan any),
-		saved:  make(chan any),
+		stor:  stor,
+		log:   log,
+		read:  make(chan request),
+		write: make(chan request),
+		ctx:   ctx,
+		close: cancel,
 	}
-	s.run()
+	s.run(ctx)
 	return s
 }
 
-func (s *PickUpPointService) run() {
+func (s *PickUpPointService) run(ctx context.Context) {
+	s.wg = sync.WaitGroup{}
+	s.wg.Add(2)
+
 	go func() {
+		defer s.wg.Done()
 		for {
+			s.log.Log("write thread: waiting for request")
 			select {
-			case <-s.close:
-				s.stor.Close()
-				close(s.saved)
+			case <-ctx.Done():
+				s.log.Log("write thread: closing")
 				return
-			case r := <-s.create:
-				r.result <- s.stor.Create(r.value)
-				close(r.result)
-			case r := <-s.update:
-				r.result <- s.stor.Update(r.value)
-				close(r.result)
-			case r := <-s.delete:
-				r.result <- s.stor.Delete(r.value)
-				close(r.result)
+			case r := <-s.write:
+				switch r.reqType {
+				case createReq:
+					s.log.Log("write thread: requested create")
+					err := s.stor.Create(r.point)
+					if err != nil {
+						s.log.Log("write thread: error: %v", err)
+					}
+				case updateReq:
+					s.log.Log("write thread: requested update")
+					err := s.stor.Update(r.point)
+					if err != nil {
+						s.log.Log("write thread: error: %v", err)
+					}
+				case deleteReq:
+					s.log.Log("write thread: requested delete")
+					err := s.stor.Delete(r.id)
+					if err != nil {
+						s.log.Log("write thread: error: %v", err)
+					}
+				default:
+					s.log.Log("write thread: invalid request")
+				}
 			}
 		}
 	}()
 
 	go func() {
+		defer s.wg.Done()
 		for {
+			s.log.Log("read thread: waiting for request")
 			select {
-			case <-s.close:
+			case <-ctx.Done():
+				s.log.Log("read thread: closing")
 				return
-			case r := <-s.list:
-				r.result <- s.stor.List()
-				close(r.result)
-			case r := <-s.get:
-				point, err := s.stor.Get(r.value)
-				r.result <- getResult{
-					point: point,
-					err:   err,
+			case r := <-s.read:
+				switch r.reqType {
+				case listReq:
+					s.log.Log("read thread: requested list")
+					list := s.stor.List()
+					s.log.PrintPoints(list)
+				case getReq:
+					s.log.Log("read thread: requested get")
+					point, err := s.stor.Get(r.id)
+					if err != nil {
+						s.log.Log("read thread: error: %v", err)
+					} else {
+						s.log.PrintPoints([]model.PickUpPoint{point})
+					}
 				}
-				close(r.result)
 			}
 		}
 	}()
 }
 
-// Close stops all goroutines and saves storage.
+// Close stops all goroutines.
 func (s *PickUpPointService) Close() {
-	close(s.close)
-	<-s.saved
+	s.close()
+	s.wg.Wait()
 }
 
 // CreatePoint creates a pick-up point.
-func (s *PickUpPointService) CreatePoint(point model.PickUpPoint) error {
-	req := newRequest[model.PickUpPoint, error](point)
-	s.create <- req
-	return <-req.result
+func (s *PickUpPointService) CreatePoint(point model.PickUpPoint) {
+	s.write <- request{reqType: createReq, point: point}
 }
 
-// ListPoints returns a slice of all pick-up points.
-func (s *PickUpPointService) ListPoints() []model.PickUpPoint {
-	req := newRequest[any, []model.PickUpPoint](nil)
-	s.list <- req
-	return <-req.result
+// ListPoints prints a slice of all pick-up points.
+func (s *PickUpPointService) ListPoints() {
+	s.read <- request{reqType: listReq}
 }
 
-// GetPoint returns a specified pick-up point.
-func (s *PickUpPointService) GetPoint(id uint64) (model.PickUpPoint, error) {
-	req := newRequest[uint64, getResult](id)
-	s.get <- req
-	res := <-req.result
-	return res.point, res.err
+// GetPoint prints a specified pick-up point.
+func (s *PickUpPointService) GetPoint(id uint64) {
+	s.read <- request{reqType: getReq, id: id}
 }
 
 // UpdatePoint updates a pick-up point info.
-func (s *PickUpPointService) UpdatePoint(point model.PickUpPoint) error {
-	req := newRequest[model.PickUpPoint, error](point)
-	s.update <- req
-	return <-req.result
+func (s *PickUpPointService) UpdatePoint(point model.PickUpPoint) {
+	s.write <- request{reqType: updateReq, point: point}
 }
 
 // DeletePoint deletes a pick-up point.
-func (s *PickUpPointService) DeletePoint(id uint64) error {
-	req := newRequest[uint64, error](id)
-	s.delete <- req
-	return <-req.result
+func (s *PickUpPointService) DeletePoint(id uint64) {
+	s.write <- request{reqType: deleteReq, id: id}
 }
