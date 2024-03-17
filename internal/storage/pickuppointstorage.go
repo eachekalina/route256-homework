@@ -14,7 +14,7 @@ type PickUpPointFileStorage struct {
 	points   map[uint64]model.PickUpPoint
 	filepath string
 	changed  bool
-	mutex    sync.Mutex
+	mutex    sync.RWMutex
 }
 
 // NewPickUpPointFileStorage returns a new PickUpPointFileStorage with file stored in the provided path.
@@ -40,17 +40,18 @@ func NewPickUpPointFileStorage(path string) (PickUpPointFileStorage, error) {
 			return PickUpPointFileStorage{}, err
 		}
 	}
-	return PickUpPointFileStorage{points: points, filepath: path, mutex: sync.Mutex{}}, nil
+	return PickUpPointFileStorage{points: points, filepath: path, mutex: sync.RWMutex{}}, nil
 }
 
 // Close saves cached pick-up points information into file when needed.
 func (s *PickUpPointFileStorage) Close() error {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
+	s.mutex.RLock()
 	if !s.changed {
+		s.mutex.RUnlock()
 		return nil
 	}
 	bytes, err := json.Marshal(s.points)
+	s.mutex.RUnlock()
 	if err != nil {
 		return err
 	}
@@ -77,8 +78,8 @@ func (s *PickUpPointFileStorage) Create(point model.PickUpPoint) error {
 
 // List returns a slice of all pick-up points stored.
 func (s *PickUpPointFileStorage) List() []model.PickUpPoint {
-	s.mutex.Lock()
-	defer s.mutex.Unlock()
+	s.mutex.RLock()
+	defer s.mutex.RUnlock()
 	slice := make([]model.PickUpPoint, 0)
 	for _, point := range s.points {
 		slice = append(slice, point)
@@ -88,9 +89,9 @@ func (s *PickUpPointFileStorage) List() []model.PickUpPoint {
 
 // Get returns the pick-up point represented by id.
 func (s *PickUpPointFileStorage) Get(id uint64) (model.PickUpPoint, error) {
-	s.mutex.Lock()
+	s.mutex.RLock()
 	point, found := s.points[id]
-	s.mutex.Unlock()
+	s.mutex.RUnlock()
 	if found {
 		return point, nil
 	}

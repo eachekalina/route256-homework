@@ -5,11 +5,12 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"golang.org/x/sync/errgroup"
+	"homework/cmd/cli"
 	"homework/internal/logger"
 	"homework/internal/model"
-	"homework/internal/orderservice"
-	"homework/internal/pickuppointcli"
-	service "homework/internal/pickuppointservice"
+	"homework/internal/service/order"
+	"homework/internal/service/pickuppoint"
 	"homework/internal/storage"
 	"log"
 	"os"
@@ -20,9 +21,11 @@ import (
 	"time"
 )
 
-const ORDERS_FILEPATH = "orders.json"
-const POINTS_FILEPATH = "points.json"
-const DATE_FORMAT = "2006-01-02"
+const (
+	ORDERS_FILEPATH = "orders.json"
+	POINTS_FILEPATH = "points.json"
+	DATE_FORMAT     = "2006-01-02"
+)
 
 func main() {
 	err := run()
@@ -72,7 +75,7 @@ func run() error {
 	if err != nil {
 		return err
 	}
-	serv := orderservice.NewOrderService(&stor)
+	serv := order.NewOrderService(&stor)
 	defer stor.Close()
 
 	switch cmd {
@@ -138,34 +141,36 @@ func printHelp() {
 }
 
 func managePickUpPoints() error {
-	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	ctx, _ := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 
 	stor, err := storage.NewPickUpPointFileStorage(POINTS_FILEPATH)
 	if err != nil {
 		return err
 	}
 	defer stor.Close()
+
+	eg, ctx := errgroup.WithContext(ctx)
+
+	logCtx, stopLog := context.WithCancel(context.Background())
+	defer stopLog()
+
 	thrLog := logger.NewLogger()
-	defer thrLog.Close()
-	thrLog.Run()
-	serv := service.NewPickUpPointService(ctx, &stor, thrLog)
-	defer serv.Close()
-	cli, err := pickuppointcli.NewPickUpPointCli(serv)
-	if err != nil {
-		return err
-	}
-	go func() {
-		err := cli.Run(ctx)
-		if err != nil {
-			log.Println(err)
-		}
-		stop()
-	}()
-	<-ctx.Done()
-	return nil
+	go thrLog.Run(logCtx)
+
+	serv := pickuppoint.NewPickUpPointService(&stor, thrLog)
+	eg.Go(func() error {
+		return serv.Run(ctx)
+	})
+
+	pickUpPointCli := cli.NewPickUpPointCli(serv, thrLog)
+	eg.Go(func() error {
+		return pickUpPointCli.Run(ctx)
+	})
+
+	return eg.Wait()
 }
 
-func acceptOrder(f flags, serv orderservice.OrderService) error {
+func acceptOrder(f flags, serv order.Service) error {
 	if f.keepDateString == "" {
 		return errors.New("keep date is required")
 	}
@@ -177,11 +182,11 @@ func acceptOrder(f flags, serv orderservice.OrderService) error {
 	return serv.AddOrder(f.orderId, f.customerId, keepDate)
 }
 
-func returnOrder(f flags, serv orderservice.OrderService) error {
+func returnOrder(f flags, serv order.Service) error {
 	return serv.RemoveOrder(f.orderId)
 }
 
-func giveOrders(args []string, serv orderservice.OrderService) error {
+func giveOrders(args []string, serv order.Service) error {
 	orderIds := make([]uint64, len(args))
 	for i, arg := range args {
 		var err error
@@ -193,7 +198,7 @@ func giveOrders(args []string, serv orderservice.OrderService) error {
 	return serv.GiveOrders(orderIds)
 }
 
-func listOrders(f flags, serv orderservice.OrderService) error {
+func listOrders(f flags, serv order.Service) error {
 	orders, err := serv.GetOrders(f.customerId, f.numberOfEntries, f.storedOnly)
 	if err != nil {
 		return err
@@ -206,11 +211,11 @@ func listOrders(f flags, serv orderservice.OrderService) error {
 	return nil
 }
 
-func acceptReturn(f flags, serv orderservice.OrderService) error {
+func acceptReturn(f flags, serv order.Service) error {
 	return serv.AcceptReturn(f.orderId, f.customerId)
 }
 
-func listReturns(serv orderservice.OrderService, f flags) error {
+func listReturns(serv order.Service, f flags) error {
 	orders, err := serv.GetReturns(f.numberOfEntries, f.page)
 	if err != nil {
 		return err

@@ -2,6 +2,7 @@ package logger
 
 import (
 	"bytes"
+	"context"
 	"fmt"
 	"homework/internal/model"
 	"text/tabwriter"
@@ -15,20 +16,16 @@ func NewLogger() *Logger {
 	return &Logger{out: make(chan string, 128)}
 }
 
-func (l *Logger) Run() {
-	go func() {
-		for {
-			s, ok := <-l.out
-			if !ok {
-				return
-			}
+func (l *Logger) Run(ctx context.Context) error {
+	defer close(l.out)
+	for {
+		select {
+		case s := <-l.out:
 			fmt.Println(s)
+		case <-ctx.Done():
+			return ctx.Err()
 		}
-	}()
-}
-
-func (l *Logger) Close() {
-	close(l.out)
+	}
 }
 
 func (l *Logger) Log(format string, a ...any) {

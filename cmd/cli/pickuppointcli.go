@@ -1,13 +1,13 @@
-package pickuppointcli
+package cli
 
 import (
 	"bufio"
 	"context"
 	"errors"
 	"fmt"
+	"homework/internal/logger"
 	"homework/internal/model"
-	service "homework/internal/pickuppointservice"
-	"log"
+	service "homework/internal/service/pickuppoint"
 	"os"
 	"strconv"
 	"strings"
@@ -15,25 +15,30 @@ import (
 
 // PickUpPointCli provides a console line interface for working with pick-up points storage.
 type PickUpPointCli struct {
-	serv    *service.PickUpPointService
+	serv    *service.Service
 	scanner *bufio.Scanner
+	log     *logger.Logger
 }
 
 // NewPickUpPointCli creates a new PickUpPointCli
-func NewPickUpPointCli(serv *service.PickUpPointService) (*PickUpPointCli, error) {
-
-	return &PickUpPointCli{serv: serv, scanner: bufio.NewScanner(os.Stdin)}, nil
+func NewPickUpPointCli(serv *service.Service, log *logger.Logger) *PickUpPointCli {
+	return &PickUpPointCli{serv: serv, scanner: bufio.NewScanner(os.Stdin), log: log}
 }
 
 // Run starts the console line interface
 func (c *PickUpPointCli) Run(ctx context.Context) error {
 	for {
-		exit, err := c.handleCommand()
-		if err != nil {
-			log.Println(err)
-		}
-		if exit {
-			return nil
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+			exit, err := c.handleCommand()
+			if err != nil {
+				c.log.Log("%v", err)
+			}
+			if exit {
+				return nil
+			}
 		}
 	}
 }
