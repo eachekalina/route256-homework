@@ -4,10 +4,10 @@ import "fmt"
 
 // PickUpPoint contains fields relevant to a pick-up point
 type PickUpPoint struct {
-	Id      uint64
-	Name    string
-	Address string
-	Contact string
+	Id      uint64 `json:"id"`
+	Name    string `json:"name"`
+	Address string `json:"address"`
+	Contact string `json:"contact"`
 }
 
 func (p PickUpPoint) String() string {

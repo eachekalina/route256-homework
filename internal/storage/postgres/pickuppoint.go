@@ -7,6 +7,7 @@ import (
 	"github.com/jackc/pgconn"
 	"homework/internal/db"
 	"homework/internal/model"
+	"homework/internal/storage"
 )
 
 // PickUpPointStorage provides a pick-up point storage with a PostgreSQL database as a backend.
@@ -24,7 +25,7 @@ func (s *PickUpPointStorage) Create(ctx context.Context, point model.PickUpPoint
 	_, err := s.db.Exec(ctx, "INSERT INTO pickup_points (id, name, address, contact) VALUES ($1, $2, $3, $4);", point.Id, point.Name, point.Address, point.Contact)
 	var pgErr *pgconn.PgError
 	if errors.As(err, &pgErr) && pgErr.ConstraintName == "pickup_points_id_pkey" {
-		return errors.New("point with such id already exists")
+		return storage.ErrIdAlreadyExists
 	}
 	return err
 }
@@ -41,7 +42,7 @@ func (s *PickUpPointStorage) Get(ctx context.Context, id uint64) (model.PickUpPo
 	var point model.PickUpPoint
 	err := s.db.Get(ctx, &point, "SELECT id, name, address, contact FROM pickup_points WHERE id = $1;", id)
 	if errors.Is(err, sql.ErrNoRows) {
-		return point, errors.New("no such point found")
+		return point, storage.ErrNoItemFound
 	}
 	return point, err
 }
@@ -53,7 +54,7 @@ func (s *PickUpPointStorage) Update(ctx context.Context, point model.PickUpPoint
 		return err
 	}
 	if tag.RowsAffected() == 0 {
-		return errors.New("no such point found")
+		return storage.ErrNoItemFound
 	}
 	return nil
 }
@@ -65,7 +66,7 @@ func (s *PickUpPointStorage) Delete(ctx context.Context, id uint64) error {
 		return err
 	}
 	if tag.RowsAffected() == 0 {
-		return errors.New("no such point found")
+		return storage.ErrNoItemFound
 	}
 	return nil
 }

@@ -3,8 +3,8 @@ package file
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"homework/internal/model"
+	"homework/internal/storage"
 	"io"
 	"os"
 	"sync"
@@ -70,7 +70,7 @@ func (s *PickUpPointFileStorage) Create(ctx context.Context, point model.PickUpP
 	defer s.mutex.Unlock()
 	_, exists := s.points[point.Id]
 	if exists {
-		return errors.New("point with such id already exists")
+		return storage.ErrIdAlreadyExists
 	}
 	s.points[point.Id] = point
 	s.changed = true
@@ -96,7 +96,7 @@ func (s *PickUpPointFileStorage) Get(ctx context.Context, id uint64) (model.Pick
 	if found {
 		return point, nil
 	}
-	return model.PickUpPoint{}, errors.New("no such point found")
+	return model.PickUpPoint{}, storage.ErrNoItemFound
 }
 
 // Update sets the parameters of a pick-up point to those provided.
@@ -105,7 +105,7 @@ func (s *PickUpPointFileStorage) Update(ctx context.Context, point model.PickUpP
 	defer s.mutex.Unlock()
 	_, found := s.points[point.Id]
 	if !found {
-		return errors.New("no such point found")
+		return storage.ErrNoItemFound
 	}
 	s.points[point.Id] = point
 	s.changed = true
@@ -118,7 +118,7 @@ func (s *PickUpPointFileStorage) Delete(ctx context.Context, id uint64) error {
 	defer s.mutex.Unlock()
 	_, found := s.points[id]
 	if !found {
-		return errors.New("no such point found")
+		return storage.ErrNoItemFound
 	}
 	delete(s.points, id)
 	s.changed = true
