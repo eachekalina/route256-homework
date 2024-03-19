@@ -37,7 +37,7 @@ func (c *PickUpPointCli) Run(ctx context.Context) error {
 				c.log.Log("%v", err)
 			}
 			if exit {
-				return nil
+				return errors.New("exiting")
 			}
 		}
 	}

@@ -13,10 +13,11 @@ type Logger struct {
 }
 
 func NewLogger() *Logger {
-	return &Logger{out: make(chan string, 128)}
+	return &Logger{}
 }
 
 func (l *Logger) Run(ctx context.Context) error {
+	l.out = make(chan string, 128)
 	defer close(l.out)
 	for {
 		select {
