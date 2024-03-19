@@ -1,6 +1,7 @@
-package storage
+package file
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"homework/internal/model"
@@ -64,7 +65,7 @@ func (s *PickUpPointFileStorage) Close() error {
 }
 
 // Create creates a new pick-up point.
-func (s *PickUpPointFileStorage) Create(point model.PickUpPoint) error {
+func (s *PickUpPointFileStorage) Create(ctx context.Context, point model.PickUpPoint) error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	_, exists := s.points[point.Id]
@@ -77,18 +78,18 @@ func (s *PickUpPointFileStorage) Create(point model.PickUpPoint) error {
 }
 
 // List returns a slice of all pick-up points stored.
-func (s *PickUpPointFileStorage) List() []model.PickUpPoint {
+func (s *PickUpPointFileStorage) List(ctx context.Context) ([]model.PickUpPoint, error) {
 	s.mutex.RLock()
 	defer s.mutex.RUnlock()
 	slice := make([]model.PickUpPoint, 0)
 	for _, point := range s.points {
 		slice = append(slice, point)
 	}
-	return slice
+	return slice, nil
 }
 
 // Get returns the pick-up point represented by id.
-func (s *PickUpPointFileStorage) Get(id uint64) (model.PickUpPoint, error) {
+func (s *PickUpPointFileStorage) Get(ctx context.Context, id uint64) (model.PickUpPoint, error) {
 	s.mutex.RLock()
 	point, found := s.points[id]
 	s.mutex.RUnlock()
@@ -99,7 +100,7 @@ func (s *PickUpPointFileStorage) Get(id uint64) (model.PickUpPoint, error) {
 }
 
 // Update sets the parameters of a pick-up point to those provided.
-func (s *PickUpPointFileStorage) Update(point model.PickUpPoint) error {
+func (s *PickUpPointFileStorage) Update(ctx context.Context, point model.PickUpPoint) error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	_, found := s.points[point.Id]
@@ -112,7 +113,7 @@ func (s *PickUpPointFileStorage) Update(point model.PickUpPoint) error {
 }
 
 // Delete deletes a pick-up point.
-func (s *PickUpPointFileStorage) Delete(id uint64) error {
+func (s *PickUpPointFileStorage) Delete(ctx context.Context, id uint64) error {
 	s.mutex.Lock()
 	defer s.mutex.Unlock()
 	_, found := s.points[id]

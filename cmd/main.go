@@ -7,11 +7,13 @@ import (
 	"fmt"
 	"golang.org/x/sync/errgroup"
 	"homework/cmd/cli"
+	"homework/internal/db"
 	"homework/internal/logger"
 	"homework/internal/model"
 	"homework/internal/service/order"
 	"homework/internal/service/pickuppoint"
-	"homework/internal/storage"
+	"homework/internal/storage/file"
+	"homework/internal/storage/postgres"
 	"log"
 	"os"
 	"os/signal"
@@ -71,7 +73,7 @@ func run() error {
 		return err
 	}
 
-	stor, err := storage.NewOrderFileStorage(ORDERS_FILEPATH)
+	stor, err := file.NewOrderFileStorage(ORDERS_FILEPATH)
 	if err != nil {
 		return err
 	}
@@ -143,7 +145,7 @@ func printHelp() {
 func managePickUpPoints() error {
 	ctx, _ := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 
-	stor, err := storage.NewPickUpPointFileStorage(POINTS_FILEPATH)
+	stor, err := file.NewPickUpPointFileStorage(POINTS_FILEPATH)
 	if err != nil {
 		return err
 	}
@@ -168,6 +170,33 @@ func managePickUpPoints() error {
 	})
 
 	return eg.Wait()
+}
+
+func runPickUpPointRestApi() error {
+	ctx, _ := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+
+	pointDb, err := db.NewDb(ctx)
+	if err != nil {
+		return err
+	}
+	defer pointDb.Close()
+
+	stor := postgres.NewPickUpPointStorage(pointDb)
+
+	eg, ctx := errgroup.WithContext(ctx)
+
+	logCtx, stopLog := context.WithCancel(context.Background())
+	defer stopLog()
+
+	thrLog := logger.NewLogger()
+	go thrLog.Run(logCtx)
+
+	serv := pickuppoint.NewPickUpPointService(stor, thrLog)
+	eg.Go(func() error {
+		return serv.Run(ctx)
+	})
+
+	return nil
 }
 
 func acceptOrder(f flags, serv order.Service) error {

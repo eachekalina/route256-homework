@@ -8,12 +8,11 @@ import (
 )
 
 type storage interface {
-	Close() error
-	Create(point model.PickUpPoint) error
-	List() []model.PickUpPoint
-	Get(id uint64) (model.PickUpPoint, error)
-	Update(point model.PickUpPoint) error
-	Delete(id uint64) error
+	Create(ctx context.Context, point model.PickUpPoint) error
+	List(ctx context.Context) ([]model.PickUpPoint, error)
+	Get(ctx context.Context, id uint64) (model.PickUpPoint, error)
+	Update(ctx context.Context, point model.PickUpPoint) error
+	Delete(ctx context.Context, id uint64) error
 }
 
 const (
@@ -75,19 +74,19 @@ func (s *Service) writeThread(ctx context.Context) error {
 			switch r.reqType {
 			case createReq:
 				s.log.Log("write thread: requested create")
-				err := s.stor.Create(r.point)
+				err := s.stor.Create(ctx, r.point)
 				if err != nil {
 					s.log.Log("write thread: error: %v", err)
 				}
 			case updateReq:
 				s.log.Log("write thread: requested update")
-				err := s.stor.Update(r.point)
+				err := s.stor.Update(ctx, r.point)
 				if err != nil {
 					s.log.Log("write thread: error: %v", err)
 				}
 			case deleteReq:
 				s.log.Log("write thread: requested delete")
-				err := s.stor.Delete(r.id)
+				err := s.stor.Delete(ctx, r.id)
 				if err != nil {
 					s.log.Log("write thread: error: %v", err)
 				}
@@ -110,11 +109,15 @@ func (s *Service) readThread(ctx context.Context) error {
 			switch r.reqType {
 			case listReq:
 				s.log.Log("read thread: requested list")
-				list := s.stor.List()
-				s.log.PrintPoints(list)
+				list, err := s.stor.List(ctx)
+				if err != nil {
+					s.log.Log("read thread: error: %v", err)
+				} else {
+					s.log.PrintPoints(list)
+				}
 			case getReq:
 				s.log.Log("read thread: requested get")
-				point, err := s.stor.Get(r.id)
+				point, err := s.stor.Get(ctx, r.id)
 				if err != nil {
 					s.log.Log("read thread: error: %v", err)
 				} else {
