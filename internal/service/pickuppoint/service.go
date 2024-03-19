@@ -41,10 +41,8 @@ type Service struct {
 // NewPickUpPointService creates a new Service.
 func NewPickUpPointService(stor storage, log *logger.Logger) *Service {
 	s := &Service{
-		stor:  stor,
-		log:   log,
-		read:  make(chan request),
-		write: make(chan request),
+		stor: stor,
+		log:  log,
 	}
 	return s
 }
@@ -64,6 +62,7 @@ func (s *Service) Run(ctx context.Context) error {
 }
 
 func (s *Service) writeThread(ctx context.Context) error {
+	s.write = make(chan request)
 	for {
 		s.log.Log("write thread: waiting for request")
 		select {
@@ -99,6 +98,8 @@ func (s *Service) writeThread(ctx context.Context) error {
 }
 
 func (s *Service) readThread(ctx context.Context) error {
+	s.read = make(chan request)
+
 	for {
 		s.log.Log("read thread: waiting for request")
 		select {
