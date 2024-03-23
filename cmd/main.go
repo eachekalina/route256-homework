@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"golang.org/x/sync/errgroup"
 	"homework/cmd/cli"
+	"homework/cmd/httpserv"
 	"homework/internal/db"
 	"homework/internal/logger"
 	"homework/internal/model"
@@ -26,7 +27,13 @@ import (
 const (
 	ORDERS_FILEPATH = "orders.json"
 	POINTS_FILEPATH = "points.json"
+	HTTPS_ADDR      = ":9443"
+	REDIRECT_ADDR   = ":9000"
+	CERT_FILE       = "server.crt"
+	KEY_FILE        = "server.key"
 	DATE_FORMAT     = "2006-01-02"
+	USERNAME        = "user"
+	PASSWORD        = "testpassword"
 )
 
 func main() {
@@ -86,6 +93,8 @@ func run() error {
 		return nil
 	case "manage-pickup-points":
 		return managePickUpPoints()
+	case "run-pickup-points-api":
+		return runPickUpPointRestApi()
 	case "accept-order":
 		return acceptOrder(f, serv)
 	case "return-order":
@@ -111,6 +120,9 @@ func printHelp() {
 
 	manage-pickup-points
 		Starts interactive mode for managing pick-up points
+
+	run-pickup-points-api
+		Starts a HTTPS API server for managing pick-up points
 
 	accept-order --order-id <order-id> --customer-id <customer-id> --keep-date <keep-date>
 		Accepts order from a courier
@@ -191,12 +203,12 @@ func runPickUpPointRestApi() error {
 	thrLog := logger.NewLogger()
 	go thrLog.Run(logCtx)
 
-	serv := pickuppoint.NewPickUpPointService(stor, thrLog)
+	serv := httpserv.NewHttpServer(stor, thrLog)
 	eg.Go(func() error {
-		return serv.Run(ctx)
+		return serv.Serve(ctx, HTTPS_ADDR, REDIRECT_ADDR, CERT_FILE, KEY_FILE, USERNAME, PASSWORD)
 	})
 
-	return nil
+	return eg.Wait()
 }
 
 func acceptOrder(f flags, serv order.Service) error {

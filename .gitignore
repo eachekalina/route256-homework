@@ -19,3 +19,9 @@
 
 # Go workspace file
 go.work
+
+orders.json
+points.json
+
+server.crt
+server.key

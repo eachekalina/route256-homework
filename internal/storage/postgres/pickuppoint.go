@@ -24,7 +24,7 @@ func NewPickUpPointStorage(db *db.Database) *PickUpPointStorage {
 func (s *PickUpPointStorage) Create(ctx context.Context, point model.PickUpPoint) error {
 	_, err := s.db.Exec(ctx, "INSERT INTO pickup_points (id, name, address, contact) VALUES ($1, $2, $3, $4);", point.Id, point.Name, point.Address, point.Contact)
 	var pgErr *pgconn.PgError
-	if errors.As(err, &pgErr) && pgErr.ConstraintName == "pickup_points_id_pkey" {
+	if errors.As(err, &pgErr) && pgErr.ConstraintName != "" {
 		return storage.ErrIdAlreadyExists
 	}
 	return err
