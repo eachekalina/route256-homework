@@ -1,20 +1,31 @@
 package main
 
 import (
-	"Homework-1/internal/model"
-	"Homework-1/internal/service"
-	"Homework-1/internal/storage"
+	"context"
 	"errors"
 	"flag"
 	"fmt"
+	"golang.org/x/sync/errgroup"
+	"homework/cmd/cli"
+	"homework/internal/logger"
+	"homework/internal/model"
+	"homework/internal/service/order"
+	"homework/internal/service/pickuppoint"
+	"homework/internal/storage"
 	"log"
 	"os"
+	"os/signal"
 	"strconv"
+	"syscall"
 	"text/tabwriter"
 	"time"
 )
 
-const FILEPATH = "orders.json"
+const (
+	ORDERS_FILEPATH = "orders.json"
+	POINTS_FILEPATH = "points.json"
+	DATE_FORMAT     = "2006-01-02"
+)
 
 func main() {
 	err := run()
@@ -54,25 +65,25 @@ func initArgs() (cmd string, args []string, f flags, err error) {
 	return cmd, args, f, nil
 }
 
-const dateFormat = "2006-01-02"
-
 func run() error {
 	cmd, args, f, err := initArgs()
 	if err != nil {
 		return err
 	}
 
-	stor, err := storage.NewFileStorage(FILEPATH)
+	stor, err := storage.NewOrderFileStorage(ORDERS_FILEPATH)
 	if err != nil {
 		return err
 	}
-	serv := service.NewService(&stor)
+	serv := order.NewOrderService(&stor)
 	defer stor.Close()
 
 	switch cmd {
 	case "help":
 		printHelp()
 		return nil
+	case "manage-pickup-points":
+		return managePickUpPoints()
 	case "accept-order":
 		return acceptOrder(f, serv)
 	case "return-order":
@@ -95,6 +106,9 @@ func printHelp() {
 
 	help
 		Show this help message
+
+	manage-pickup-points
+		Starts interactive mode for managing pick-up points
 
 	accept-order --order-id <order-id> --customer-id <customer-id> --keep-date <keep-date>
 		Accepts order from a courier
@@ -126,11 +140,41 @@ func printHelp() {
 		--page			specify page number, starting with 0`)
 }
 
-func acceptOrder(f flags, serv service.Service) error {
+func managePickUpPoints() error {
+	ctx, _ := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+
+	stor, err := storage.NewPickUpPointFileStorage(POINTS_FILEPATH)
+	if err != nil {
+		return err
+	}
+	defer stor.Close()
+
+	eg, ctx := errgroup.WithContext(ctx)
+
+	logCtx, stopLog := context.WithCancel(context.Background())
+	defer stopLog()
+
+	thrLog := logger.NewLogger()
+	go thrLog.Run(logCtx)
+
+	serv := pickuppoint.NewPickUpPointService(&stor, thrLog)
+	eg.Go(func() error {
+		return serv.Run(ctx)
+	})
+
+	pickUpPointCli := cli.NewPickUpPointCli(serv, thrLog)
+	eg.Go(func() error {
+		return pickUpPointCli.Run(ctx)
+	})
+
+	return eg.Wait()
+}
+
+func acceptOrder(f flags, serv order.Service) error {
 	if f.keepDateString == "" {
 		return errors.New("keep date is required")
 	}
-	keepDate, err := time.ParseInLocation(dateFormat, f.keepDateString, time.Local)
+	keepDate, err := time.ParseInLocation(DATE_FORMAT, f.keepDateString, time.Local)
 	if err != nil {
 		return err
 	}
@@ -138,11 +182,11 @@ func acceptOrder(f flags, serv service.Service) error {
 	return serv.AddOrder(f.orderId, f.customerId, keepDate)
 }
 
-func returnOrder(f flags, serv service.Service) error {
+func returnOrder(f flags, serv order.Service) error {
 	return serv.RemoveOrder(f.orderId)
 }
 
-func giveOrders(args []string, serv service.Service) error {
+func giveOrders(args []string, serv order.Service) error {
 	orderIds := make([]uint64, len(args))
 	for i, arg := range args {
 		var err error
@@ -154,7 +198,7 @@ func giveOrders(args []string, serv service.Service) error {
 	return serv.GiveOrders(orderIds)
 }
 
-func listOrders(f flags, serv service.Service) error {
+func listOrders(f flags, serv order.Service) error {
 	orders, err := serv.GetOrders(f.customerId, f.numberOfEntries, f.storedOnly)
 	if err != nil {
 		return err
@@ -167,11 +211,11 @@ func listOrders(f flags, serv service.Service) error {
 	return nil
 }
 
-func acceptReturn(f flags, serv service.Service) error {
+func acceptReturn(f flags, serv order.Service) error {
 	return serv.AcceptReturn(f.orderId, f.customerId)
 }
 
-func listReturns(serv service.Service, f flags) error {
+func listReturns(serv order.Service, f flags) error {
 	orders, err := serv.GetReturns(f.numberOfEntries, f.page)
 	if err != nil {
 		return err

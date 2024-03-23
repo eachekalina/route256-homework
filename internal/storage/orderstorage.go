@@ -1,35 +1,33 @@
 package storage
 
 import (
-	"Homework-1/internal/model"
 	"encoding/json"
 	"errors"
+	"homework/internal/model"
 	"io"
 	"os"
 )
 
-// FileStorage provides a storage with a JSON file as a backend.
-type FileStorage struct {
+// OrderFileStorage provides an order storage with a JSON file as a backend.
+type OrderFileStorage struct {
 	orders   map[uint64]model.Order
 	filepath string
 	changed  bool
 }
 
-const filePerm = 0777
-
-// NewFileStorage returns a new FileStorage with file stored in the provided path.
-func NewFileStorage(path string) (FileStorage, error) {
+// NewOrderFileStorage returns a new OrderFileStorage with file stored in the provided path.
+func NewOrderFileStorage(path string) (OrderFileStorage, error) {
 	file, err := os.OpenFile(path, os.O_CREATE, filePerm)
 	if err != nil {
-		return FileStorage{}, err
+		return OrderFileStorage{}, err
 	}
 	bytes, err := io.ReadAll(file)
 	if err != nil {
-		return FileStorage{}, err
+		return OrderFileStorage{}, err
 	}
 	err = file.Close()
 	if err != nil {
-		return FileStorage{}, err
+		return OrderFileStorage{}, err
 	}
 	var orders map[uint64]model.Order
 	if len(bytes) == 0 {
@@ -37,14 +35,14 @@ func NewFileStorage(path string) (FileStorage, error) {
 	} else {
 		err = json.Unmarshal(bytes, &orders)
 		if err != nil {
-			return FileStorage{}, err
+			return OrderFileStorage{}, err
 		}
 	}
-	return FileStorage{orders: orders, filepath: path}, nil
+	return OrderFileStorage{orders: orders, filepath: path}, nil
 }
 
-// Close saves cached order information into file when needed.
-func (s *FileStorage) Close() error {
+// Close saves cached orders information into file when needed.
+func (s *OrderFileStorage) Close() error {
 	if !s.changed {
 		return nil
 	}
@@ -61,7 +59,7 @@ func (s *FileStorage) Close() error {
 }
 
 // Create creates a new order.
-func (s *FileStorage) Create(order model.Order) error {
+func (s *OrderFileStorage) Create(order model.Order) error {
 	_, exists := s.orders[order.Id]
 	if exists {
 		return errors.New("order with such id already exists")
@@ -72,8 +70,8 @@ func (s *FileStorage) Create(order model.Order) error {
 }
 
 // List returns a slice of all orders stored.
-func (s *FileStorage) List() []model.Order {
-	slice := make([]model.Order, len(s.orders))
+func (s *OrderFileStorage) List() []model.Order {
+	slice := make([]model.Order, 0)
 	for _, order := range s.orders {
 		slice = append(slice, order)
 	}
@@ -81,7 +79,7 @@ func (s *FileStorage) List() []model.Order {
 }
 
 // Get returns the order represented by id.
-func (s *FileStorage) Get(id uint64) (model.Order, error) {
+func (s *OrderFileStorage) Get(id uint64) (model.Order, error) {
 	if order, found := s.orders[id]; found {
 		return order, nil
 	}
@@ -89,7 +87,7 @@ func (s *FileStorage) Get(id uint64) (model.Order, error) {
 }
 
 // Update sets the parameters of an order to those provided.
-func (s *FileStorage) Update(order model.Order) error {
+func (s *OrderFileStorage) Update(order model.Order) error {
 	_, found := s.orders[order.Id]
 	if !found {
 		return errors.New("no such order found")
@@ -100,7 +98,7 @@ func (s *FileStorage) Update(order model.Order) error {
 }
 
 // Delete deletes an order.
-func (s *FileStorage) Delete(id uint64) error {
+func (s *OrderFileStorage) Delete(id uint64) error {
 	_, found := s.orders[id]
 	if !found {
 		return errors.New("no such order found")

@@ -1,8 +1,8 @@
-package service
+package order
 
 import (
-	"Homework-1/internal/model"
 	"errors"
+	"homework/internal/model"
 	"slices"
 	"time"
 )
@@ -20,8 +20,8 @@ type Service struct {
 	stor storage
 }
 
-// NewService creates a new Service.
-func NewService(s storage) Service {
+// NewOrderService creates a new Service.
+func NewOrderService(s storage) Service {
 	return Service{stor: s}
 }
 
