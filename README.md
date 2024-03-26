@@ -23,7 +23,7 @@ curl \
 ## Получение по идентификатору
 
 ```shell
-curl
+curl \
     -H "Authorization: Basic dXNlcjp0ZXN0cGFzc3dvcmQ=" \
     -k \
     https://localhost:9443/pickup-point/1

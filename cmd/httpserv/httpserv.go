@@ -38,27 +38,39 @@ func NewHttpServer(stor storage, log *logger.Logger) *HttpServer {
 func (s *HttpServer) Serve(ctx context.Context, httpsAddr string, redirectAddr string, certFile string, keyFile string, username string, password string) error {
 	router := mux.NewRouter()
 	router.HandleFunc("/pickup-point", func(w http.ResponseWriter, req *http.Request) {
+		var code int
+		var body []byte
 		switch req.Method {
 		case http.MethodGet:
-			s.list(w, req)
+			code, body = s.list(req)
 		case http.MethodPost:
-			s.create(w, req)
+			code, body = s.create(req)
 		default:
 			w.Header().Set("Allow", "GET, POST")
-			w.WriteHeader(http.StatusMethodNotAllowed)
+			code = http.StatusMethodNotAllowed
+		}
+		w.WriteHeader(code)
+		if body != nil {
+			w.Write(body)
 		}
 	})
 	router.HandleFunc("/pickup-point/{id:[0-9]+}", func(w http.ResponseWriter, req *http.Request) {
+		var code int
+		var body []byte
 		switch req.Method {
 		case http.MethodGet:
-			s.get(w, req)
+			code, body = s.get(req)
 		case http.MethodPut:
-			s.update(w, req)
+			code, body = s.update(req)
 		case http.MethodDelete:
-			s.delete(w, req)
+			code, body = s.delete(req)
 		default:
 			w.Header().Set("Allow", "GET, PUT, DELETE")
-			w.WriteHeader(http.StatusMethodNotAllowed)
+			code = http.StatusMethodNotAllowed
+		}
+		w.WriteHeader(code)
+		if body != nil {
+			w.Write(body)
 		}
 	})
 	router.Use(s.logMiddleware)
@@ -108,162 +120,137 @@ func (s *HttpServer) Serve(ctx context.Context, httpsAddr string, redirectAddr s
 	return eg.Wait()
 }
 
-func (s *HttpServer) create(w http.ResponseWriter, req *http.Request) {
+func (s *HttpServer) create(req *http.Request) (int, []byte) {
 	body, err := io.ReadAll(req.Body)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
+		return http.StatusInternalServerError, nil
 	}
 
 	var point model.PickUpPoint
 	err = json.Unmarshal(body, &point)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
+		return http.StatusBadRequest, nil
 	}
 
 	err = s.stor.Create(req.Context(), point)
 	if err != nil {
 		if errors.Is(err, storerr.ErrIdAlreadyExists) {
-			w.WriteHeader(http.StatusConflict)
-			return
+			return http.StatusConflict, nil
 		}
-		w.WriteHeader(http.StatusInternalServerError)
-		return
+		return http.StatusInternalServerError, nil
 	}
 
 	pointJson, err := json.Marshal(point)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
+		return http.StatusInternalServerError, nil
 	}
 
-	w.WriteHeader(http.StatusCreated)
-	w.Write(pointJson)
+	return http.StatusCreated, pointJson
 }
 
-func (s *HttpServer) list(w http.ResponseWriter, req *http.Request) {
+func (s *HttpServer) list(req *http.Request) (int, []byte) {
 	list, err := s.stor.List(req.Context())
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
+		return http.StatusInternalServerError, nil
 	}
 
 	listJson, err := json.Marshal(list)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
+		return http.StatusInternalServerError, nil
 	}
 
-	w.Write(listJson)
+	return http.StatusOK, listJson
 }
 
-func (s *HttpServer) get(w http.ResponseWriter, req *http.Request) {
+func (s *HttpServer) get(req *http.Request) (int, []byte) {
 	idStr, ok := mux.Vars(req)["id"]
 	if !ok {
-		w.WriteHeader(http.StatusBadRequest)
-		return
+		return http.StatusBadRequest, nil
 	}
 
 	id, err := strconv.ParseUint(idStr, 10, 64)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
+		return http.StatusBadRequest, nil
 	}
 
 	point, err := s.stor.Get(req.Context(), id)
 	if err != nil {
 		if errors.Is(err, storerr.ErrNoItemFound) {
-			w.WriteHeader(http.StatusNotFound)
-			return
+			return http.StatusNotFound, nil
 		}
-		w.WriteHeader(http.StatusInternalServerError)
-		return
+		return http.StatusInternalServerError, nil
 	}
 
 	pointJson, err := json.Marshal(point)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
+		return http.StatusInternalServerError, nil
 	}
 
-	w.Write(pointJson)
+	return http.StatusOK, pointJson
 }
 
-func (s *HttpServer) update(w http.ResponseWriter, req *http.Request) {
+func (s *HttpServer) update(req *http.Request) (int, []byte) {
 	idStr, ok := mux.Vars(req)["id"]
 	if !ok {
-		w.WriteHeader(http.StatusBadRequest)
-		return
+		return http.StatusBadRequest, nil
 	}
 
 	id, err := strconv.ParseUint(idStr, 10, 64)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
+		return http.StatusBadRequest, nil
 	}
 
 	body, err := io.ReadAll(req.Body)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
+		return http.StatusInternalServerError, nil
 	}
 
 	var point model.PickUpPoint
 	err = json.Unmarshal(body, &point)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
+		return http.StatusBadRequest, nil
 	}
 
 	if point.Id != id {
-		w.WriteHeader(http.StatusBadRequest)
-		return
+		return http.StatusBadRequest, nil
 	}
 
 	err = s.stor.Update(req.Context(), point)
 	if err != nil {
 		if errors.Is(err, storerr.ErrNoItemFound) {
-			w.WriteHeader(http.StatusNotFound)
-			return
+			return http.StatusNotFound, nil
 		}
-		w.WriteHeader(http.StatusInternalServerError)
-		return
+		return http.StatusInternalServerError, nil
 	}
 
 	pointJson, err := json.Marshal(point)
 	if err != nil {
-		w.WriteHeader(http.StatusInternalServerError)
-		return
+		return http.StatusInternalServerError, nil
 	}
 
-	w.Write(pointJson)
+	return http.StatusOK, pointJson
 }
 
-func (s *HttpServer) delete(w http.ResponseWriter, req *http.Request) {
+func (s *HttpServer) delete(req *http.Request) (int, []byte) {
 	idStr, ok := mux.Vars(req)["id"]
 	if !ok {
-		w.WriteHeader(http.StatusBadRequest)
-		return
+		return http.StatusBadRequest, nil
 	}
 
 	id, err := strconv.ParseUint(idStr, 10, 64)
 	if err != nil {
-		w.WriteHeader(http.StatusBadRequest)
-		return
+		return http.StatusBadRequest, nil
 	}
 
 	err = s.stor.Delete(req.Context(), id)
 	if err != nil {
 		if errors.Is(err, storerr.ErrNoItemFound) {
-			w.WriteHeader(http.StatusNotFound)
-			return
+			return http.StatusNotFound, nil
 		}
-		w.WriteHeader(http.StatusInternalServerError)
-		return
+		return http.StatusInternalServerError, nil
 	}
 
-	w.WriteHeader(http.StatusNoContent)
+	return http.StatusNoContent, nil
 }
 
 func (s *HttpServer) logMiddleware(h http.Handler) http.Handler {

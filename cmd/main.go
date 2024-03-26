@@ -27,13 +27,7 @@ import (
 const (
 	ORDERS_FILEPATH = "orders.json"
 	POINTS_FILEPATH = "points.json"
-	HTTPS_ADDR      = ":9443"
-	REDIRECT_ADDR   = ":9000"
-	CERT_FILE       = "server.crt"
-	KEY_FILE        = "server.key"
 	DATE_FORMAT     = "2006-01-02"
-	USERNAME        = "user"
-	PASSWORD        = "testpassword"
 )
 
 func main() {
@@ -50,6 +44,12 @@ type flags struct {
 	numberOfEntries int
 	storedOnly      bool
 	page            int
+	httpsAddr       string
+	redirectAddr    string
+	certFile        string
+	keyFile         string
+	username        string
+	password        string
 }
 
 func initArgs() (cmd string, args []string, f flags, err error) {
@@ -61,6 +61,12 @@ func initArgs() (cmd string, args []string, f flags, err error) {
 	fs.IntVar(&f.numberOfEntries, "n", 0, "specify number of entries")
 	fs.BoolVar(&f.storedOnly, "stored-only", false, "display only stored orders")
 	fs.IntVar(&f.page, "page", 0, "specify page")
+	fs.StringVar(&f.httpsAddr, "https-address", ":9443", "specify https listen address")
+	fs.StringVar(&f.redirectAddr, "redirect-address", ":9000", "specify redirect listen address")
+	fs.StringVar(&f.certFile, "tls-cert", "server.crt", "specify tls certificate file")
+	fs.StringVar(&f.keyFile, "tls-key", "server.key", "specify tls certificate key file")
+	fs.StringVar(&f.username, "username", "user", "specify access control username")
+	fs.StringVar(&f.password, "password", "testpassword", "specify access control password")
 
 	if len(os.Args) < 2 {
 		return "", nil, flags{}, errors.New("subcommand is required, see `help` subcommand for details")
@@ -94,7 +100,7 @@ func run() error {
 	case "manage-pickup-points":
 		return managePickUpPoints()
 	case "run-pickup-points-api":
-		return runPickUpPointRestApi()
+		return runPickUpPointRestApi(f)
 	case "accept-order":
 		return acceptOrder(f, serv)
 	case "return-order":
@@ -123,6 +129,12 @@ func printHelp() {
 
 	run-pickup-points-api
 		Starts a HTTPS API server for managing pick-up points
+		--https-address		specify HTTPS listen address, default: :9443
+		--redirect-address	specify redirect listen address, default: :9000
+		--tls-cert			specify TLS certificate file, default: server.crt
+		--tls-key			specify TLS certificate key file, default: server.key
+		--username			specify access control username, default: user
+		--password			specify access control password, default: testpassword
 
 	accept-order --order-id <order-id> --customer-id <customer-id> --keep-date <keep-date>
 		Accepts order from a courier
@@ -184,7 +196,7 @@ func managePickUpPoints() error {
 	return eg.Wait()
 }
 
-func runPickUpPointRestApi() error {
+func runPickUpPointRestApi(f flags) error {
 	ctx, _ := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 
 	pointDb, err := db.NewDb(ctx)
@@ -205,7 +217,7 @@ func runPickUpPointRestApi() error {
 
 	serv := httpserv.NewHttpServer(stor, thrLog)
 	eg.Go(func() error {
-		return serv.Serve(ctx, HTTPS_ADDR, REDIRECT_ADDR, CERT_FILE, KEY_FILE, USERNAME, PASSWORD)
+		return serv.Serve(ctx, f.httpsAddr, f.redirectAddr, f.certFile, f.keyFile, f.username, f.password)
 	})
 
 	return eg.Wait()

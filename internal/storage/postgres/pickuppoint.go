@@ -34,7 +34,10 @@ func (s *PickUpPointStorage) Create(ctx context.Context, point model.PickUpPoint
 func (s *PickUpPointStorage) List(ctx context.Context) ([]model.PickUpPoint, error) {
 	var slice []model.PickUpPoint
 	err := s.db.Select(ctx, &slice, "SELECT id, name, address, contact FROM pickup_points;")
-	return slice, err
+	if err != nil {
+		return nil, err
+	}
+	return slice, nil
 }
 
 // Get returns the pick-up point represented by id.

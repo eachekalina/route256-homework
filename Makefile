@@ -2,8 +2,7 @@ ifeq ($(POSTGRES_SETUP_TEST),)
 	POSTGRES_SETUP_TEST := user=test password=test dbname=test host=localhost port=5432 sslmode=disable
 endif
 
-INTERNAL_PKG_PATH=$(CURDIR)/internal
-MIGRATION_FOLDER=$(INTERNAL_PKG_PATH)/db/migrations
+MIGRATION_FOLDER=$(CURDIR)/migrations
 
 .PHONY: migration-create
 migration-create:
