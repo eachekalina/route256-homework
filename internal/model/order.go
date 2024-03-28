@@ -13,6 +13,8 @@ type Order struct {
 	AddDate    time.Time `json:"add_date"`
 	Id         uint64    `json:"id"`
 	CustomerId uint64    `json:"customer_id"`
+	PriceRub   int64     `json:"price"`
+	WeightKg   float64   `json:"weight_kg"`
 	IsGiven    bool      `json:"is_given"`
 	IsReturned bool      `json:"is_returned"`
 }
@@ -29,9 +31,11 @@ func (o Order) String() string {
 		displayedReturnDate = o.ReturnDate.Format(dateFormat)
 	}
 	return fmt.Sprintf(
-		"%d\t%d\t%s\t%s\t%t\t%s\t%t\t%s\n",
+		"%d\t%d\t%d\t%.3f\t%s\t%s\t%t\t%s\t%t\t%s\n",
 		o.Id,
 		o.CustomerId,
+		o.PriceRub,
+		o.WeightKg,
 		o.AddDate.Format(dateFormat),
 		o.KeepDate.Format(dateFormat),
 		o.IsGiven,

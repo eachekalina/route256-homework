@@ -11,6 +11,7 @@ import (
 	"homework/internal/db"
 	"homework/internal/logger"
 	"homework/internal/model"
+	"homework/internal/packaging"
 	"homework/internal/service/order"
 	"homework/internal/service/pickuppoint"
 	"homework/internal/storage/file"
@@ -41,6 +42,9 @@ type flags struct {
 	orderId         uint64
 	customerId      uint64
 	keepDateString  string
+	price           int64
+	weightKg        float64
+	packagingType   string
 	numberOfEntries int
 	storedOnly      bool
 	page            int
@@ -58,6 +62,9 @@ func initArgs() (cmd string, args []string, f flags, err error) {
 	fs.Uint64Var(&f.orderId, "order-id", 0, "specify order id")
 	fs.Uint64Var(&f.customerId, "customer-id", 0, "specify customer id")
 	fs.StringVar(&f.keepDateString, "keep-date", "", "specify keep date")
+	fs.Int64Var(&f.price, "price", 0, "specify price in rubles")
+	fs.Float64Var(&f.weightKg, "weight", 0.0, "specify weight in kg")
+	fs.StringVar(&f.packagingType, "packaging", "", "specify packaging")
 	fs.IntVar(&f.numberOfEntries, "n", 0, "specify number of entries")
 	fs.BoolVar(&f.storedOnly, "stored-only", false, "display only stored orders")
 	fs.IntVar(&f.page, "page", 0, "specify page")
@@ -136,11 +143,14 @@ func printHelp() {
 		--username			specify access control username, default: user
 		--password			specify access control password, default: testpassword
 
-	accept-order --order-id <order-id> --customer-id <customer-id> --keep-date <keep-date>
+	accept-order --order-id <order-id> --customer-id <customer-id> --keep-date <keep-date> --price <price> --weight <weight>
 		Accepts order from a courier
 		--order-id		specify an order id
 		--customer-id	specify a customer id
 		--keep-date		specify a keep date in YYYY-MM-DD format
+		--price			specify price in rubles
+		--weight		specify weight in kg
+		--packaging		specify packaging type
 
 	return-order --order-id <order-id>
 		Returns order to a courier
@@ -223,6 +233,12 @@ func runPickUpPointRestApi(f flags) error {
 	return eg.Wait()
 }
 
+var packagingVariants = map[packaging.Type]packaging.Variant{
+	packaging.BagType:  packaging.BagVariant{},
+	packaging.BoxType:  packaging.BoxVariant{},
+	packaging.WrapType: packaging.WrapVariant{},
+}
+
 func acceptOrder(f flags, serv order.Service) error {
 	if f.keepDateString == "" {
 		return errors.New("keep date is required")
@@ -232,7 +248,15 @@ func acceptOrder(f flags, serv order.Service) error {
 		return err
 	}
 	keepDate = keepDate.Add(23*time.Hour + 59*time.Minute + 59*time.Second)
-	return serv.AddOrder(f.orderId, f.customerId, keepDate)
+	var packagingVariant packaging.Variant
+	if f.packagingType != "" {
+		var ok bool
+		packagingVariant, ok = packagingVariants[packaging.Type(f.packagingType)]
+		if !ok {
+			return errors.New("invalid packaging type")
+		}
+	}
+	return serv.AddOrder(f.orderId, f.customerId, keepDate, f.price, f.weightKg, packagingVariant)
 }
 
 func returnOrder(f flags, serv order.Service) error {
@@ -285,9 +309,11 @@ func printOrders(orders []model.Order) {
 	w := tabwriter.NewWriter(os.Stdout, 0, 4, 2, ' ', 0)
 	fmt.Fprintf(
 		w,
-		"%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n",
+		"%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n",
 		"Order id",
 		"Customer id",
+		"Price RUB",
+		"Weight kg",
 		"Add date",
 		"Keep date",
 		"Is given",
@@ -295,7 +321,7 @@ func printOrders(orders []model.Order) {
 		"Is returned",
 		"Return date")
 	for _, order := range orders {
-		fmt.Fprintln(w, order)
+		fmt.Fprint(w, order)
 	}
 	w.Flush()
 }

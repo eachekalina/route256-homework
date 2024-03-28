@@ -3,6 +3,7 @@ package order
 import (
 	"errors"
 	"homework/internal/model"
+	"homework/internal/packaging"
 	"slices"
 	"time"
 )
@@ -26,7 +27,7 @@ func NewOrderService(s storage) Service {
 }
 
 // AddOrder creates a new order with provided orderId, customerId and keepDate.
-func (s *Service) AddOrder(orderId uint64, customerId uint64, keepDate time.Time) error {
+func (s *Service) AddOrder(orderId uint64, customerId uint64, keepDate time.Time, priceRub int64, weightKg float64, packagingVariant packaging.Variant) error {
 	if orderId == 0 {
 		return errors.New("valid order id is required")
 	}
@@ -37,16 +38,28 @@ func (s *Service) AddOrder(orderId uint64, customerId uint64, keepDate time.Time
 	if keepDate.Before(now) {
 		return errors.New("keepDate can't be in the past")
 	}
-	err := s.stor.Create(model.Order{
+	if priceRub <= 0 {
+		return errors.New("price must be positive")
+	}
+	if weightKg <= 0 {
+		return errors.New("weight must be positive")
+	}
+	order := model.Order{
 		KeepDate:   keepDate,
 		AddDate:    now,
 		Id:         orderId,
 		CustomerId: customerId,
-	})
-	if err != nil {
-		return err
+		PriceRub:   priceRub,
+		WeightKg:   weightKg,
 	}
-	return nil
+	if packagingVariant != nil {
+		var err error
+		order, err = packagingVariant.Apply(order)
+		if err != nil {
+			return err
+		}
+	}
+	return s.stor.Create(order)
 }
 
 // RemoveOrder removes order associated with provided orderId.
