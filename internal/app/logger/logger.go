@@ -1,11 +1,8 @@
 package logger
 
 import (
-	"bytes"
 	"context"
 	"fmt"
-	"homework/internal/app/pickuppoint"
-	"text/tabwriter"
 )
 
 type Logger struct {
@@ -31,21 +28,4 @@ func (l *Logger) Run(ctx context.Context) error {
 
 func (l *Logger) Log(format string, a ...any) {
 	l.out <- fmt.Sprintf(format, a...)
-}
-
-func (l *Logger) PrintPoints(points []pickuppoint.PickUpPoint) {
-	var buf bytes.Buffer
-	w := tabwriter.NewWriter(&buf, 0, 4, 2, ' ', 0)
-	fmt.Fprintf(
-		w,
-		"%s\t%s\t%s\t%s\n",
-		"Id",
-		"Name",
-		"Address",
-		"Contact")
-	for _, point := range points {
-		fmt.Fprint(w, point)
-	}
-	w.Flush()
-	l.Log(buf.String())
 }

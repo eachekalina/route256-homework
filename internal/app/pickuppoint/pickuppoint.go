@@ -1,6 +1,10 @@
 package pickuppoint
 
-import "fmt"
+import (
+	"bytes"
+	"fmt"
+	"text/tabwriter"
+)
 
 // PickUpPoint contains fields relevant to a pick-up point
 type PickUpPoint struct {
@@ -17,4 +21,21 @@ func (p PickUpPoint) String() string {
 		p.Name,
 		p.Address,
 		p.Contact)
+}
+
+func ListPoints(points []PickUpPoint) string {
+	var buf bytes.Buffer
+	w := tabwriter.NewWriter(&buf, 0, 4, 2, ' ', 0)
+	fmt.Fprintf(
+		w,
+		"%s\t%s\t%s\t%s\n",
+		"Id",
+		"Name",
+		"Address",
+		"Contact")
+	for _, point := range points {
+		fmt.Fprint(w, point)
+	}
+	w.Flush()
+	return buf.String()
 }

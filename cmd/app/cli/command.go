@@ -81,7 +81,7 @@ func (c *PickUpPointCommands) ListCommand(ui *ConsoleUi) error {
 		if err != nil {
 			return err
 		}
-		c.log.PrintPoints(points)
+		c.log.Log(pickuppoint.ListPoints(points))
 		return nil
 	})
 	return nil
@@ -97,7 +97,7 @@ func (c *PickUpPointCommands) GetCommand(ui *ConsoleUi) error {
 		if err != nil {
 			return err
 		}
-		c.log.PrintPoints([]pickuppoint.PickUpPoint{point})
+		c.log.Log(pickuppoint.ListPoints([]pickuppoint.PickUpPoint{point}))
 		return nil
 	})
 	return nil
