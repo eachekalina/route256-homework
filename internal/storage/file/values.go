@@ -1,3 +1,3 @@
-package storage
+package file
 
 const filePerm = 0777

@@ -1,9 +1,9 @@
-package storage
+package file
 
 import (
 	"encoding/json"
-	"errors"
 	"homework/internal/model"
+	"homework/internal/storage"
 	"io"
 	"os"
 )
@@ -62,7 +62,7 @@ func (s *OrderFileStorage) Close() error {
 func (s *OrderFileStorage) Create(order model.Order) error {
 	_, exists := s.orders[order.Id]
 	if exists {
-		return errors.New("order with such id already exists")
+		return storage.ErrIdAlreadyExists
 	}
 	s.orders[order.Id] = order
 	s.changed = true
@@ -83,14 +83,14 @@ func (s *OrderFileStorage) Get(id uint64) (model.Order, error) {
 	if order, found := s.orders[id]; found {
 		return order, nil
 	}
-	return model.Order{}, errors.New("no such order found")
+	return model.Order{}, storage.ErrNoItemFound
 }
 
 // Update sets the parameters of an order to those provided.
 func (s *OrderFileStorage) Update(order model.Order) error {
 	_, found := s.orders[order.Id]
 	if !found {
-		return errors.New("no such order found")
+		return storage.ErrNoItemFound
 	}
 	s.orders[order.Id] = order
 	s.changed = true
@@ -101,7 +101,7 @@ func (s *OrderFileStorage) Update(order model.Order) error {
 func (s *OrderFileStorage) Delete(id uint64) error {
 	_, found := s.orders[id]
 	if !found {
-		return errors.New("no such order found")
+		return storage.ErrNoItemFound
 	}
 	delete(s.orders, id)
 	s.changed = true

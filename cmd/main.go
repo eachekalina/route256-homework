@@ -7,11 +7,14 @@ import (
 	"fmt"
 	"golang.org/x/sync/errgroup"
 	"homework/cmd/cli"
+	"homework/cmd/httpserv"
+	"homework/internal/db"
 	"homework/internal/logger"
 	"homework/internal/model"
 	"homework/internal/service/order"
 	"homework/internal/service/pickuppoint"
-	"homework/internal/storage"
+	"homework/internal/storage/file"
+	"homework/internal/storage/postgres"
 	"log"
 	"os"
 	"os/signal"
@@ -41,6 +44,12 @@ type flags struct {
 	numberOfEntries int
 	storedOnly      bool
 	page            int
+	httpsAddr       string
+	redirectAddr    string
+	certFile        string
+	keyFile         string
+	username        string
+	password        string
 }
 
 func initArgs() (cmd string, args []string, f flags, err error) {
@@ -52,6 +61,12 @@ func initArgs() (cmd string, args []string, f flags, err error) {
 	fs.IntVar(&f.numberOfEntries, "n", 0, "specify number of entries")
 	fs.BoolVar(&f.storedOnly, "stored-only", false, "display only stored orders")
 	fs.IntVar(&f.page, "page", 0, "specify page")
+	fs.StringVar(&f.httpsAddr, "https-address", ":9443", "specify https listen address")
+	fs.StringVar(&f.redirectAddr, "redirect-address", ":9000", "specify redirect listen address")
+	fs.StringVar(&f.certFile, "tls-cert", "server.crt", "specify tls certificate file")
+	fs.StringVar(&f.keyFile, "tls-key", "server.key", "specify tls certificate key file")
+	fs.StringVar(&f.username, "username", "user", "specify access control username")
+	fs.StringVar(&f.password, "password", "testpassword", "specify access control password")
 
 	if len(os.Args) < 2 {
 		return "", nil, flags{}, errors.New("subcommand is required, see `help` subcommand for details")
@@ -71,7 +86,7 @@ func run() error {
 		return err
 	}
 
-	stor, err := storage.NewOrderFileStorage(ORDERS_FILEPATH)
+	stor, err := file.NewOrderFileStorage(ORDERS_FILEPATH)
 	if err != nil {
 		return err
 	}
@@ -84,6 +99,8 @@ func run() error {
 		return nil
 	case "manage-pickup-points":
 		return managePickUpPoints()
+	case "run-pickup-points-api":
+		return runPickUpPointRestApi(f)
 	case "accept-order":
 		return acceptOrder(f, serv)
 	case "return-order":
@@ -109,6 +126,15 @@ func printHelp() {
 
 	manage-pickup-points
 		Starts interactive mode for managing pick-up points
+
+	run-pickup-points-api
+		Starts a HTTPS API server for managing pick-up points
+		--https-address		specify HTTPS listen address, default: :9443
+		--redirect-address	specify redirect listen address, default: :9000
+		--tls-cert			specify TLS certificate file, default: server.crt
+		--tls-key			specify TLS certificate key file, default: server.key
+		--username			specify access control username, default: user
+		--password			specify access control password, default: testpassword
 
 	accept-order --order-id <order-id> --customer-id <customer-id> --keep-date <keep-date>
 		Accepts order from a courier
@@ -143,7 +169,7 @@ func printHelp() {
 func managePickUpPoints() error {
 	ctx, _ := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 
-	stor, err := storage.NewPickUpPointFileStorage(POINTS_FILEPATH)
+	stor, err := file.NewPickUpPointFileStorage(POINTS_FILEPATH)
 	if err != nil {
 		return err
 	}
@@ -165,6 +191,33 @@ func managePickUpPoints() error {
 	pickUpPointCli := cli.NewPickUpPointCli(serv, thrLog)
 	eg.Go(func() error {
 		return pickUpPointCli.Run(ctx)
+	})
+
+	return eg.Wait()
+}
+
+func runPickUpPointRestApi(f flags) error {
+	ctx, _ := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+
+	pointDb, err := db.NewDb(ctx)
+	if err != nil {
+		return err
+	}
+	defer pointDb.Close()
+
+	stor := postgres.NewPickUpPointStorage(pointDb)
+
+	eg, ctx := errgroup.WithContext(ctx)
+
+	logCtx, stopLog := context.WithCancel(context.Background())
+	defer stopLog()
+
+	thrLog := logger.NewLogger()
+	go thrLog.Run(logCtx)
+
+	serv := httpserv.NewHttpServer(stor, thrLog)
+	eg.Go(func() error {
+		return serv.Serve(ctx, f.httpsAddr, f.redirectAddr, f.certFile, f.keyFile, f.username, f.password)
 	})
 
 	return eg.Wait()
