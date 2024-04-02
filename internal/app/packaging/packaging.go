@@ -9,9 +9,9 @@ type Type string
 const (
 	BagType  Type = "bag"
 	BoxType  Type = "box"
-	WrapType Type = "wrap"
+	FilmType Type = "film"
 )
 
-type Variant interface {
+type Packaging interface {
 	Apply(order order.Order) (order.Order, error)
 }

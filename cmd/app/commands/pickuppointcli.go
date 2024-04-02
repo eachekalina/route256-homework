@@ -1,4 +1,4 @@
-package cmdargs
+package commands
 
 import (
 	"context"

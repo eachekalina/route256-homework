@@ -2,7 +2,6 @@ package order
 
 import (
 	"encoding/json"
-	"homework/internal/app/storerr"
 	"io"
 	"os"
 )
@@ -63,7 +62,7 @@ func (s *FileRepository) Close() error {
 func (s *FileRepository) Create(order Order) error {
 	_, exists := s.orders[order.Id]
 	if exists {
-		return storerr.ErrIdAlreadyExists
+		return ErrIdAlreadyExists
 	}
 	s.orders[order.Id] = order
 	s.changed = true
@@ -84,14 +83,14 @@ func (s *FileRepository) Get(id uint64) (Order, error) {
 	if order, found := s.orders[id]; found {
 		return order, nil
 	}
-	return Order{}, storerr.ErrNoItemFound
+	return Order{}, ErrNoItemFound
 }
 
 // Update sets the parameters of an order to those provided.
 func (s *FileRepository) Update(order Order) error {
 	_, found := s.orders[order.Id]
 	if !found {
-		return storerr.ErrNoItemFound
+		return ErrNoItemFound
 	}
 	s.orders[order.Id] = order
 	s.changed = true
@@ -102,7 +101,7 @@ func (s *FileRepository) Update(order Order) error {
 func (s *FileRepository) Delete(id uint64) error {
 	_, found := s.orders[id]
 	if !found {
-		return storerr.ErrNoItemFound
+		return ErrNoItemFound
 	}
 	delete(s.orders, id)
 	s.changed = true

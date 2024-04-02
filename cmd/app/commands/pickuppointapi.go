@@ -1,4 +1,4 @@
-package cmdargs
+package commands
 
 import (
 	"context"
@@ -7,6 +7,7 @@ import (
 	"homework/cmd/app/httpserv"
 	"homework/internal/app/core"
 	"homework/internal/app/logger"
+	"homework/internal/app/middleware"
 	"net/http"
 	"os/signal"
 	"syscall"
@@ -61,8 +62,8 @@ func (c *PickUpPointApiConsoleCommands) RunPickUpPointApi(args []string) error {
 	}
 
 	params.Middlewares = []mux.MiddlewareFunc{
-		httpserv.LogMiddleware(log),
-		httpserv.AuthMiddleware(username, password),
+		middleware.LogMiddleware(log),
+		middleware.AuthMiddleware(username, password),
 	}
 
 	serv := httpserv.NewHttpServer(params)

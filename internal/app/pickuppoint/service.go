@@ -2,6 +2,7 @@ package pickuppoint
 
 import (
 	"context"
+	"errors"
 )
 
 type Repository interface {
@@ -11,6 +12,9 @@ type Repository interface {
 	Update(ctx context.Context, point PickUpPoint) error
 	Delete(ctx context.Context, id uint64) error
 }
+
+var ErrIdAlreadyExists = errors.New("item with such id already exists")
+var ErrNoItemFound = errors.New("no such item found")
 
 // Service allows concurrent working on pick-up points.
 type Service struct {

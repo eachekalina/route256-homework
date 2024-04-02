@@ -14,6 +14,9 @@ type Repository interface {
 	Delete(id uint64) error
 }
 
+var ErrIdAlreadyExists = errors.New("item with such id already exists")
+var ErrNoItemFound = errors.New("no such item found")
+
 // Service provides methods to work with orders.
 type Service struct {
 	repo Repository

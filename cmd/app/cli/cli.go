@@ -39,7 +39,7 @@ func (ui *ConsoleUi) Run(ctx context.Context) error {
 }
 
 func (ui *ConsoleUi) handleCommand() error {
-	line, err := ui.GetLine("")
+	line, err := ui.getLine("")
 	if err != nil {
 		return err
 	}
@@ -51,7 +51,7 @@ func (ui *ConsoleUi) handleCommand() error {
 	return cmd(ui)
 }
 
-func (ui *ConsoleUi) GetLine(prompt string) (string, error) {
+func (ui *ConsoleUi) getLine(prompt string) (string, error) {
 	fmt.Printf("%s > ", prompt)
 	if !ui.scanner.Scan() {
 		return "", ui.scanner.Err()
@@ -60,8 +60,8 @@ func (ui *ConsoleUi) GetLine(prompt string) (string, error) {
 	return strings.TrimSpace(line), nil
 }
 
-func (ui *ConsoleUi) GetUint(prompt string) (uint64, error) {
-	str, err := ui.GetLine(prompt)
+func (ui *ConsoleUi) getUint(prompt string) (uint64, error) {
+	str, err := ui.getLine(prompt)
 	if err != nil {
 		return 0, err
 	}

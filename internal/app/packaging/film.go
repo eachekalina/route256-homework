@@ -4,10 +4,10 @@ import (
 	"homework/internal/app/order"
 )
 
-type WrapVariant struct {
+type Film struct {
 }
 
-func (v WrapVariant) Apply(o order.Order) (order.Order, error) {
+func (v Film) Apply(o order.Order) (order.Order, error) {
 	o.PriceRub += 1
 	return o, nil
 }

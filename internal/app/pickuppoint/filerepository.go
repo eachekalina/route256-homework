@@ -3,7 +3,6 @@ package pickuppoint
 import (
 	"context"
 	"encoding/json"
-	"homework/internal/app/storerr"
 	"io"
 	"os"
 	"sync"
@@ -71,7 +70,7 @@ func (s *FileRepository) Create(ctx context.Context, point PickUpPoint) error {
 	defer s.mutex.Unlock()
 	_, exists := s.points[point.Id]
 	if exists {
-		return storerr.ErrIdAlreadyExists
+		return ErrIdAlreadyExists
 	}
 	s.points[point.Id] = point
 	s.changed = true
@@ -97,7 +96,7 @@ func (s *FileRepository) Get(ctx context.Context, id uint64) (PickUpPoint, error
 	if found {
 		return point, nil
 	}
-	return PickUpPoint{}, storerr.ErrNoItemFound
+	return PickUpPoint{}, ErrNoItemFound
 }
 
 // Update sets the parameters of a pick-up point to those provided.
@@ -106,7 +105,7 @@ func (s *FileRepository) Update(ctx context.Context, point PickUpPoint) error {
 	defer s.mutex.Unlock()
 	_, found := s.points[point.Id]
 	if !found {
-		return storerr.ErrNoItemFound
+		return ErrNoItemFound
 	}
 	s.points[point.Id] = point
 	s.changed = true
@@ -119,7 +118,7 @@ func (s *FileRepository) Delete(ctx context.Context, id uint64) error {
 	defer s.mutex.Unlock()
 	_, found := s.points[id]
 	if !found {
-		return storerr.ErrNoItemFound
+		return ErrNoItemFound
 	}
 	delete(s.points, id)
 	s.changed = true

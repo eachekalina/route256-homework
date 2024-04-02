@@ -46,7 +46,7 @@ func (s *OrderCoreService) AcceptOrder(req AcceptOrderRequest) error {
 		return errors.New("weight must be positive")
 	}
 
-	var packagingVariant packaging.Variant
+	var packagingVariant packaging.Packaging
 	if req.PackagingType != "" {
 		var ok bool
 		packagingVariant, ok = s.packagingVariants[packaging.Type(req.PackagingType)]

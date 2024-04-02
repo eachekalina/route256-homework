@@ -52,19 +52,19 @@ func (c *PickUpPointCommands) handleInputError(err error) error {
 func (c *PickUpPointCommands) CreateCommand(ui *ConsoleUi) error {
 	var req core.CreatePointRequest
 	var err error
-	req.Id, err = ui.GetUint("enter point id")
+	req.Id, err = ui.getUint("enter point id")
 	if err != nil {
 		return c.handleInputError(err)
 	}
-	req.Name, err = ui.GetLine("enter point name")
+	req.Name, err = ui.getLine("enter point name")
 	if err != nil {
 		return c.handleInputError(err)
 	}
-	req.Address, err = ui.GetLine("enter point address")
+	req.Address, err = ui.getLine("enter point address")
 	if err != nil {
 		return c.handleInputError(err)
 	}
-	req.Contact, err = ui.GetLine("enter point contact")
+	req.Contact, err = ui.getLine("enter point contact")
 	if err != nil {
 		return c.handleInputError(err)
 	}
@@ -88,7 +88,7 @@ func (c *PickUpPointCommands) ListCommand(ui *ConsoleUi) error {
 }
 
 func (c *PickUpPointCommands) GetCommand(ui *ConsoleUi) error {
-	id, err := ui.GetUint("enter point id")
+	id, err := ui.getUint("enter point id")
 	if err != nil {
 		return c.handleInputError(err)
 	}
@@ -106,19 +106,19 @@ func (c *PickUpPointCommands) GetCommand(ui *ConsoleUi) error {
 func (c *PickUpPointCommands) UpdateCommand(ui *ConsoleUi) error {
 	var req core.UpdatePointRequest
 	var err error
-	req.Id, err = ui.GetUint("enter point id")
+	req.Id, err = ui.getUint("enter point id")
 	if err != nil {
 		return c.handleInputError(err)
 	}
-	req.Name, err = ui.GetLine("enter new point name")
+	req.Name, err = ui.getLine("enter new point name")
 	if err != nil {
 		return c.handleInputError(err)
 	}
-	req.Address, err = ui.GetLine("enter new point address")
+	req.Address, err = ui.getLine("enter new point address")
 	if err != nil {
 		return c.handleInputError(err)
 	}
-	req.Contact, err = ui.GetLine("enter new point contact")
+	req.Contact, err = ui.getLine("enter new point contact")
 	if err != nil {
 		return c.handleInputError(err)
 	}
@@ -130,7 +130,7 @@ func (c *PickUpPointCommands) UpdateCommand(ui *ConsoleUi) error {
 }
 
 func (c *PickUpPointCommands) DeleteCommand(ui *ConsoleUi) error {
-	id, err := ui.GetUint("enter point id")
+	id, err := ui.getUint("enter point id")
 	if err != nil {
 		return c.handleInputError(err)
 	}

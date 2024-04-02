@@ -6,7 +6,7 @@ import (
 	"github.com/gorilla/mux"
 	"homework/internal/app/core"
 	"homework/internal/app/logger"
-	"homework/internal/app/storerr"
+	"homework/internal/app/pickuppoint"
 	"io"
 	"net/http"
 	"strconv"
@@ -36,7 +36,7 @@ func (h *PickUpPointHandlers) CreateHandler(httpReq *http.Request) (int, []byte)
 
 	err = h.svc.CreatePoint(httpReq.Context(), req)
 	if err != nil {
-		if errors.Is(err, storerr.ErrIdAlreadyExists) {
+		if errors.Is(err, pickuppoint.ErrIdAlreadyExists) {
 			return http.StatusConflict, nil
 		}
 		h.log.Log("%v", err)
@@ -81,7 +81,7 @@ func (h *PickUpPointHandlers) GetHandler(req *http.Request) (int, []byte) {
 
 	point, err := h.svc.GetPoint(req.Context(), id)
 	if err != nil {
-		if errors.Is(err, storerr.ErrNoItemFound) {
+		if errors.Is(err, pickuppoint.ErrNoItemFound) {
 			return http.StatusNotFound, nil
 		}
 		h.log.Log("%v", err)
@@ -126,7 +126,7 @@ func (h *PickUpPointHandlers) UpdateHandler(httpReq *http.Request) (int, []byte)
 
 	err = h.svc.UpdatePoint(httpReq.Context(), req)
 	if err != nil {
-		if errors.Is(err, storerr.ErrNoItemFound) {
+		if errors.Is(err, pickuppoint.ErrNoItemFound) {
 			return http.StatusNotFound, nil
 		}
 		h.log.Log("%v", err)
@@ -155,7 +155,7 @@ func (h *PickUpPointHandlers) DeleteHandler(req *http.Request) (int, []byte) {
 
 	err = h.svc.DeletePoint(req.Context(), id)
 	if err != nil {
-		if errors.Is(err, storerr.ErrNoItemFound) {
+		if errors.Is(err, pickuppoint.ErrNoItemFound) {
 			return http.StatusNotFound, nil
 		}
 		h.log.Log("%v", err)

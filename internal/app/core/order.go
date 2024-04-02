@@ -7,7 +7,7 @@ import (
 
 type OrderCoreService struct {
 	orderService      OrderService
-	packagingVariants map[packaging.Type]packaging.Variant
+	packagingVariants map[packaging.Type]packaging.Packaging
 }
 
 type OrderService interface {
@@ -19,9 +19,9 @@ type OrderService interface {
 	GetReturns(count int, pageNum int) ([]order.Order, error)
 }
 
-func NewOrderCoreService(orderService OrderService, packagingVariants map[packaging.Type]packaging.Variant) *OrderCoreService {
+func NewOrderCoreService(orderService OrderService, packagingTypes map[packaging.Type]packaging.Packaging) *OrderCoreService {
 	return &OrderCoreService{
 		orderService:      orderService,
-		packagingVariants: packagingVariants,
+		packagingVariants: packagingTypes,
 	}
 }

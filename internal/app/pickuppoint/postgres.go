@@ -6,7 +6,6 @@ import (
 	"github.com/jackc/pgconn"
 	"github.com/jackc/pgx/v4"
 	"homework/internal/app/db"
-	"homework/internal/app/storerr"
 )
 
 // PostgresRepository provides a pick-up point Repository with a PostgreSQL database as a backend.
@@ -24,7 +23,7 @@ func (s *PostgresRepository) Create(ctx context.Context, point PickUpPoint) erro
 	_, err := s.db.Exec(ctx, "INSERT INTO pickup_points (id, name, address, contact) VALUES ($1, $2, $3, $4);", point.Id, point.Name, point.Address, point.Contact)
 	var pgErr *pgconn.PgError
 	if errors.As(err, &pgErr) && pgErr.ConstraintName != "" {
-		return storerr.ErrIdAlreadyExists
+		return ErrIdAlreadyExists
 	}
 	return err
 }
@@ -44,7 +43,7 @@ func (s *PostgresRepository) Get(ctx context.Context, id uint64) (PickUpPoint, e
 	var point PickUpPoint
 	err := s.db.Get(ctx, &point, "SELECT id, name, address, contact FROM pickup_points WHERE id = $1;", id)
 	if errors.Is(err, pgx.ErrNoRows) {
-		return point, storerr.ErrNoItemFound
+		return point, ErrNoItemFound
 	}
 	return point, err
 }
@@ -56,7 +55,7 @@ func (s *PostgresRepository) Update(ctx context.Context, point PickUpPoint) erro
 		return err
 	}
 	if tag.RowsAffected() == 0 {
-		return storerr.ErrNoItemFound
+		return ErrNoItemFound
 	}
 	return nil
 }
@@ -68,7 +67,7 @@ func (s *PostgresRepository) Delete(ctx context.Context, id uint64) error {
 		return err
 	}
 	if tag.RowsAffected() == 0 {
-		return storerr.ErrNoItemFound
+		return ErrNoItemFound
 	}
 	return nil
 }

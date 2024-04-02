@@ -3,7 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
-	"homework/cmd/app/cmdargs"
+	"homework/cmd/app/commands"
 	"homework/internal/app/core"
 	"homework/internal/app/db"
 	"homework/internal/app/order"
@@ -36,7 +36,7 @@ func run() error {
 		return err
 	}
 
-	cliCommands := cmdargs.NewPickUpPointCliConsoleCommands(
+	cliCommands := commands.NewPickUpPointCliConsoleCommands(
 		core.NewPickUpPointCoreService(pickuppoint.NewService(pointFileRepo)),
 		helpCommand,
 	)
@@ -46,7 +46,7 @@ func run() error {
 		return err
 	}
 
-	apiCommands := cmdargs.NewPickUpPointApiConsoleCommands(
+	apiCommands := commands.NewPickUpPointApiConsoleCommands(
 		core.NewPickUpPointCoreService(pickuppoint.NewService(pickuppoint.NewPostgresRepository(pointDb))),
 		helpCommand,
 	)
@@ -56,18 +56,18 @@ func run() error {
 		return err
 	}
 
-	packagingVariants := map[packaging.Type]packaging.Variant{
-		packaging.BagType:  packaging.BagVariant{},
-		packaging.BoxType:  packaging.BoxVariant{},
-		packaging.WrapType: packaging.WrapVariant{},
+	packagingTypes := map[packaging.Type]packaging.Packaging{
+		packaging.BagType:  packaging.Bag{},
+		packaging.BoxType:  packaging.Box{},
+		packaging.FilmType: packaging.Film{},
 	}
 
-	orderCommands := cmdargs.NewOrderConsoleCommands(
-		core.NewOrderCoreService(order.NewService(orderFileRepo), packagingVariants),
+	orderCommands := commands.NewOrderConsoleCommands(
+		core.NewOrderCoreService(order.NewService(orderFileRepo), packagingTypes),
 		helpCommand,
 	)
 
-	cmdMap := map[string]cmdargs.Command{
+	cmdMap := map[string]commands.Command{
 		"help":                  helpCommand,
 		"manage-pickup-points":  cliCommands.ManagePickUpPointsCommand,
 		"run-pickup-points-api": apiCommands.RunPickUpPointApi,
@@ -78,7 +78,7 @@ func run() error {
 		"accept-return":         orderCommands.AcceptReturnCommand,
 		"list-returns":          orderCommands.ListReturnsCommand,
 	}
-	return cmdargs.Run(cmdMap)
+	return commands.Run(cmdMap)
 }
 
 func help() {
