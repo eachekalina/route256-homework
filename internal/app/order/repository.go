@@ -3,29 +3,17 @@ package order
 import (
 	"encoding/json"
 	"io"
-	"os"
 )
-
-const filePerm = 0777
 
 // FileRepository provides an order Repository with a JSON file as a backend.
 type FileRepository struct {
-	orders   map[uint64]Order
-	filepath string
-	changed  bool
+	orders  map[uint64]Order
+	changed bool
 }
 
-// NewOrderFileRepository returns a new FileRepository with file stored in the provided path.
-func NewOrderFileRepository(path string) (*FileRepository, error) {
-	file, err := os.OpenFile(path, os.O_CREATE, filePerm)
-	if err != nil {
-		return nil, err
-	}
-	bytes, err := io.ReadAll(file)
-	if err != nil {
-		return nil, err
-	}
-	err = file.Close()
+// NewFileRepository returns a new FileRepository with file stored in the provided path.
+func NewFileRepository(r io.Reader) (*FileRepository, error) {
+	bytes, err := io.ReadAll(r)
 	if err != nil {
 		return nil, err
 	}
@@ -38,11 +26,11 @@ func NewOrderFileRepository(path string) (*FileRepository, error) {
 			return nil, err
 		}
 	}
-	return &FileRepository{orders: orders, filepath: path}, nil
+	return &FileRepository{orders: orders}, nil
 }
 
 // Close saves cached orders information into file when needed.
-func (s *FileRepository) Close() error {
+func (s *FileRepository) Close(w io.Writer) error {
 	if !s.changed {
 		return nil
 	}
@@ -50,7 +38,7 @@ func (s *FileRepository) Close() error {
 	if err != nil {
 		return err
 	}
-	err = os.WriteFile(s.filepath, bytes, filePerm)
+	_, err = w.Write(bytes)
 	if err != nil {
 		return err
 	}

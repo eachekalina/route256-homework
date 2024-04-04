@@ -14,11 +14,11 @@ import (
 )
 
 type PickUpPointApiConsoleCommands struct {
-	svc  *core.PickUpPointCoreService
+	svc  core.PickUpPointCoreService
 	help Command
 }
 
-func NewPickUpPointApiConsoleCommands(svc *core.PickUpPointCoreService, help Command) *PickUpPointApiConsoleCommands {
+func NewPickUpPointApiConsoleCommands(svc core.PickUpPointCoreService, help Command) *PickUpPointApiConsoleCommands {
 	return &PickUpPointApiConsoleCommands{svc: svc, help: help}
 }
 

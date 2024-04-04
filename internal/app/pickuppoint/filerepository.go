@@ -4,31 +4,19 @@ import (
 	"context"
 	"encoding/json"
 	"io"
-	"os"
 	"sync"
 )
 
-const filePerm = 0777
-
 // FileRepository provides a pick-up point Repository with a JSON file as a backend.
 type FileRepository struct {
-	points   map[uint64]PickUpPoint
-	filepath string
-	changed  bool
-	mutex    sync.RWMutex
+	points  map[uint64]PickUpPoint
+	changed bool
+	mutex   sync.RWMutex
 }
 
 // NewFileRepository returns a new FileRepository with file stored in the provided path.
-func NewFileRepository(path string) (*FileRepository, error) {
-	file, err := os.OpenFile(path, os.O_CREATE, filePerm)
-	if err != nil {
-		return nil, err
-	}
-	bytes, err := io.ReadAll(file)
-	if err != nil {
-		return nil, err
-	}
-	err = file.Close()
+func NewFileRepository(r io.Reader) (*FileRepository, error) {
+	bytes, err := io.ReadAll(r)
 	if err != nil {
 		return nil, err
 	}
@@ -41,11 +29,11 @@ func NewFileRepository(path string) (*FileRepository, error) {
 			return nil, err
 		}
 	}
-	return &FileRepository{points: points, filepath: path}, nil
+	return &FileRepository{points: points}, nil
 }
 
 // Close saves cached pick-up points information into file when needed.
-func (s *FileRepository) Close() error {
+func (s *FileRepository) Close(w io.Writer) error {
 	s.mutex.RLock()
 	if !s.changed {
 		s.mutex.RUnlock()
@@ -56,7 +44,7 @@ func (s *FileRepository) Close() error {
 	if err != nil {
 		return err
 	}
-	err = os.WriteFile(s.filepath, bytes, filePerm)
+	_, err = w.Write(bytes)
 	if err != nil {
 		return err
 	}

@@ -5,6 +5,6 @@ import (
 	"homework/internal/app/pickuppoint"
 )
 
-func (s *PickUpPointCoreService) GetPoint(ctx context.Context, id uint64) (pickuppoint.PickUpPoint, error) {
+func (s *pickUpPointCoreService) GetPoint(ctx context.Context, id uint64) (pickuppoint.PickUpPoint, error) {
 	return s.pointService.GetPoint(ctx, id)
 }

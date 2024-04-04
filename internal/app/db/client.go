@@ -15,7 +15,7 @@ const (
 	dbname   = "test"
 )
 
-func NewDb(ctx context.Context) (*Database, error) {
+func NewDb(ctx context.Context) (*PostgresDatabase, error) {
 	pool, err := pgxpool.Connect(ctx, generateDsn())
 	if err != nil {
 		return nil, err

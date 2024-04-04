@@ -1,38 +1,50 @@
+//go:generate mockgen -source=./database.go -destination=../mocks/database.go -package=mocks
+
 package db
 
 import (
 	"context"
 
 	"github.com/georgysavva/scany/pgxscan"
-	"github.com/jackc/pgconn"
 	"github.com/jackc/pgx/v4"
 	"github.com/jackc/pgx/v4/pgxpool"
 )
 
-type Database struct {
+type CommandTag interface {
+	RowsAffected() int64
+}
+
+type Database interface {
+	Get(ctx context.Context, dest interface{}, query string, args ...interface{}) error
+	Select(ctx context.Context, dest interface{}, query string, args ...interface{}) error
+	Exec(ctx context.Context, query string, args ...interface{}) (CommandTag, error)
+	ExecQueryRow(ctx context.Context, query string, args ...interface{}) pgx.Row
+}
+
+type PostgresDatabase struct {
 	cluster *pgxpool.Pool
 }
 
-func newDatabase(cluster *pgxpool.Pool) *Database {
-	return &Database{cluster: cluster}
+func newDatabase(cluster *pgxpool.Pool) *PostgresDatabase {
+	return &PostgresDatabase{cluster: cluster}
 }
 
-func (db Database) Close() {
+func (db PostgresDatabase) Close() {
 	db.cluster.Close()
 }
 
-func (db Database) Get(ctx context.Context, dest interface{}, query string, args ...interface{}) error {
+func (db PostgresDatabase) Get(ctx context.Context, dest interface{}, query string, args ...interface{}) error {
 	return pgxscan.Get(ctx, db.cluster, dest, query, args...)
 }
 
-func (db Database) Select(ctx context.Context, dest interface{}, query string, args ...interface{}) error {
+func (db PostgresDatabase) Select(ctx context.Context, dest interface{}, query string, args ...interface{}) error {
 	return pgxscan.Select(ctx, db.cluster, dest, query, args...)
 }
 
-func (db Database) Exec(ctx context.Context, query string, args ...interface{}) (pgconn.CommandTag, error) {
+func (db PostgresDatabase) Exec(ctx context.Context, query string, args ...interface{}) (CommandTag, error) {
 	return db.cluster.Exec(ctx, query, args...)
 }
 
-func (db Database) ExecQueryRow(ctx context.Context, query string, args ...interface{}) pgx.Row {
+func (db PostgresDatabase) ExecQueryRow(ctx context.Context, query string, args ...interface{}) pgx.Row {
 	return db.cluster.QueryRow(ctx, query, args...)
 }

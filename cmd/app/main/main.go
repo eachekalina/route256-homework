@@ -16,6 +16,7 @@ import (
 const (
 	ORDERS_FILEPATH = "orders.json"
 	POINTS_FILEPATH = "points.json"
+	filePerm        = 0777
 )
 
 func main() {
@@ -31,10 +32,11 @@ func run() error {
 		return nil
 	}
 
-	pointFileRepo, err := pickuppoint.NewFileRepository(POINTS_FILEPATH)
+	pointFileRepo, closePointFileRepo, err := initPickUpPointFileRepository()
 	if err != nil {
 		return err
 	}
+	defer closePointFileRepo()
 
 	cliCommands := commands.NewPickUpPointCliConsoleCommands(
 		core.NewPickUpPointCoreService(pickuppoint.NewService(pointFileRepo)),
@@ -45,16 +47,18 @@ func run() error {
 	if err != nil {
 		return err
 	}
+	defer pointDb.Close()
 
 	apiCommands := commands.NewPickUpPointApiConsoleCommands(
 		core.NewPickUpPointCoreService(pickuppoint.NewService(pickuppoint.NewPostgresRepository(pointDb))),
 		helpCommand,
 	)
 
-	orderFileRepo, err := order.NewOrderFileRepository(ORDERS_FILEPATH)
+	orderFileRepo, closeOrderFileRepo, err := initOrderFileRepository()
 	if err != nil {
 		return err
 	}
+	defer closeOrderFileRepo()
 
 	packagingTypes := map[packaging.Type]packaging.Packaging{
 		packaging.BagType:  packaging.Bag{},
@@ -79,6 +83,66 @@ func run() error {
 		"list-returns":          orderCommands.ListReturnsCommand,
 	}
 	return commands.Run(cmdMap)
+}
+
+func initPickUpPointFileRepository() (*pickuppoint.FileRepository, func(), error) {
+	file, err := os.OpenFile(POINTS_FILEPATH, os.O_CREATE|os.O_RDONLY, filePerm)
+	if err != nil {
+		return nil, nil, err
+	}
+	repo, err := pickuppoint.NewFileRepository(file)
+	if err != nil {
+		closeErr := file.Close()
+		if closeErr != nil {
+			log.Println(closeErr)
+		}
+		return nil, nil, err
+	}
+	err = file.Close()
+	if err != nil {
+		return nil, nil, err
+	}
+	f := func() {
+		file, err := os.OpenFile(POINTS_FILEPATH, os.O_CREATE|os.O_WRONLY, filePerm)
+		if err != nil {
+			log.Println(err)
+		}
+		err = repo.Close(file)
+		if err != nil {
+			log.Println(err)
+		}
+	}
+	return repo, f, nil
+}
+
+func initOrderFileRepository() (*order.FileRepository, func(), error) {
+	file, err := os.OpenFile(POINTS_FILEPATH, os.O_CREATE|os.O_RDONLY, filePerm)
+	if err != nil {
+		return nil, nil, err
+	}
+	repo, err := order.NewFileRepository(file)
+	if err != nil {
+		closeErr := file.Close()
+		if closeErr != nil {
+			log.Println(closeErr)
+		}
+		return nil, nil, err
+	}
+	err = file.Close()
+	if err != nil {
+		return nil, nil, err
+	}
+	f := func() {
+		file, err := os.OpenFile(ORDERS_FILEPATH, os.O_CREATE|os.O_WRONLY, filePerm)
+		if err != nil {
+			log.Println(err)
+		}
+		err = repo.Close(file)
+		if err != nil {
+			log.Println(err)
+		}
+	}
+	return repo, f, nil
 }
 
 func help() {
