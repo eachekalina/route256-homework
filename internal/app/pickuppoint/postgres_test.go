@@ -7,7 +7,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/mock/gomock"
-	"homework/internal/app/mocks"
+	"homework/internal/app/db/mocks"
 	"testing"
 )
 

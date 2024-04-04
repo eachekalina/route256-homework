@@ -5,7 +5,8 @@ import (
 	"github.com/stretchr/testify/suite"
 	"go.uber.org/mock/gomock"
 	"homework/internal/app/core"
-	"homework/internal/app/mocks"
+	coremocks "homework/internal/app/core/mocks"
+	logmocks "homework/internal/app/logger/mocks"
 	"homework/internal/app/pickuppoint"
 	"net/http"
 	"net/http/httptest"
@@ -71,8 +72,8 @@ func (s *PickUpPointHandlersTestSuite) Test_CreateHandler() {
 	for _, tt := range tests {
 		s.Run(tt.name, func() {
 			ctrl := gomock.NewController(s.T())
-			svc := mocks.NewMockPickUpPointCoreService(ctrl)
-			log := mocks.NewMockLogger(ctrl)
+			svc := coremocks.NewMockPickUpPointCoreService(ctrl)
+			log := logmocks.NewMockLogger(ctrl)
 			h := &PickUpPointHandlers{
 				svc: svc,
 				log: log,
@@ -123,8 +124,8 @@ func (s *PickUpPointHandlersTestSuite) Test_ListHandler() {
 	for _, tt := range tests {
 		s.Run(tt.name, func() {
 			ctrl := gomock.NewController(s.T())
-			svc := mocks.NewMockPickUpPointCoreService(ctrl)
-			log := mocks.NewMockLogger(ctrl)
+			svc := coremocks.NewMockPickUpPointCoreService(ctrl)
+			log := logmocks.NewMockLogger(ctrl)
 			h := &PickUpPointHandlers{
 				svc: svc,
 				log: log,
@@ -185,8 +186,8 @@ func (s *PickUpPointHandlersTestSuite) Test_GetHandler() {
 	for _, tt := range tests {
 		s.Run(tt.name, func() {
 			ctrl := gomock.NewController(s.T())
-			svc := mocks.NewMockPickUpPointCoreService(ctrl)
-			log := mocks.NewMockLogger(ctrl)
+			svc := coremocks.NewMockPickUpPointCoreService(ctrl)
+			log := logmocks.NewMockLogger(ctrl)
 			h := &PickUpPointHandlers{
 				svc: svc,
 				log: log,
@@ -271,8 +272,8 @@ func (s *PickUpPointHandlersTestSuite) Test_UpdateHandler() {
 	for _, tt := range tests {
 		s.Run(tt.name, func() {
 			ctrl := gomock.NewController(s.T())
-			svc := mocks.NewMockPickUpPointCoreService(ctrl)
-			log := mocks.NewMockLogger(ctrl)
+			svc := coremocks.NewMockPickUpPointCoreService(ctrl)
+			log := logmocks.NewMockLogger(ctrl)
 			h := &PickUpPointHandlers{
 				svc: svc,
 				log: log,
@@ -324,8 +325,8 @@ func (s *PickUpPointHandlersTestSuite) Test_DeleteHandler() {
 	for _, tt := range tests {
 		s.Run(tt.name, func() {
 			ctrl := gomock.NewController(s.T())
-			svc := mocks.NewMockPickUpPointCoreService(ctrl)
-			log := mocks.NewMockLogger(ctrl)
+			svc := coremocks.NewMockPickUpPointCoreService(ctrl)
+			log := logmocks.NewMockLogger(ctrl)
 			h := &PickUpPointHandlers{
 				svc: svc,
 				log: log,

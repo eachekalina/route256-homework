@@ -1,4 +1,4 @@
-//go:generate mockgen -source=./pickuppoint.go -destination=../mocks/pickuppoint.go -package=mocks
+//go:generate mockgen -source=./pickuppoint.go -destination=./mocks/pickuppoint.go -package=mocks
 
 package core
 

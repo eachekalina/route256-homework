@@ -20,6 +20,10 @@ test-migration-down:
 run-test-environment:
 	docker compose up -d
 
+.PHONY: stop-test-environment
+stop-test-environment:
+	docker compose down
+
 .PHONY: run-unit-tests
 run-unit-tests:
 	go test ./...

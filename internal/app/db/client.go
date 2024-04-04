@@ -3,16 +3,18 @@ package db
 import (
 	"context"
 	"fmt"
+	"os"
+	"strconv"
 
 	"github.com/jackc/pgx/v4/pgxpool"
 )
 
 const (
-	host     = "localhost"
-	port     = 5432
-	user     = "test"
-	password = "test"
-	dbname   = "test"
+	defaultHost     = "localhost"
+	defaultPort     = 5432
+	defaultUser     = "test"
+	defaultPassword = "test"
+	defaultDbName   = "test"
 )
 
 func NewDb(ctx context.Context) (*PostgresDatabase, error) {
@@ -23,6 +25,19 @@ func NewDb(ctx context.Context) (*PostgresDatabase, error) {
 	return newDatabase(pool), nil
 }
 
+func getEnv(key string, defaultValue string) string {
+	value, ok := os.LookupEnv(key)
+	if !ok {
+		return defaultValue
+	}
+	return value
+}
+
 func generateDsn() string {
-	return fmt.Sprintf("host=%s port=%d user=%s password=%s dbname=%s sslmode=disable", host, port, user, password, dbname)
+	host := getEnv("DB_HOST", defaultHost)
+	port := getEnv("DB_PORT", strconv.Itoa(defaultPort))
+	user := getEnv("DB_USER", defaultUser)
+	password := getEnv("DB_PASSWORD", defaultPassword)
+	dbname := getEnv("DB_DBNAME", defaultDbName)
+	return fmt.Sprintf("host=%s port=%s user=%s password=%s dbname=%s sslmode=disable", host, port, user, password, dbname)
 }
