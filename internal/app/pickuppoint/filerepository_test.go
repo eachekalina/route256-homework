@@ -47,9 +47,9 @@ func (s *FileRepositoryTestSuite) Test_Open() {
 			r := strings.NewReader(tt.json)
 			repo, err := NewFileRepository(r)
 			if tt.wantErr {
-				s.NotNil(err)
+				s.Error(err)
 			} else {
-				s.Nil(err)
+				s.NoError(err)
 				s.Equal(tt.points, repo.points)
 			}
 		})
@@ -78,15 +78,14 @@ func (s *FileRepositoryTestSuite) Test_Close() {
 	}
 	for _, tt := range tests {
 		s.Run(tt.name, func() {
-			repo := &FileRepository{}
-			repo.points = tt.points
+			repo := &FileRepository{points: tt.points}
 			repo.changed = true
 			var buf bytes.Buffer
 			err := repo.Close(&buf)
 			if tt.wantErr {
-				s.NotNil(err)
+				s.Error(err)
 			} else {
-				s.Nil(err)
+				s.NoError(err)
 				s.Equal(tt.json, buf.String())
 			}
 		})
@@ -128,14 +127,13 @@ func (s *FileRepositoryTestSuite) Test_Create() {
 	}
 	for _, tt := range tests {
 		s.Run(tt.name, func() {
-			repo := &FileRepository{}
-			repo.points = tt.beforePoints
+			repo := &FileRepository{points: tt.beforePoints}
 			err := repo.Create(context.Background(), tt.point)
 			if tt.wantErr {
-				s.NotNil(err)
+				s.Error(err)
 				s.ErrorIs(err, tt.err)
 			} else {
-				s.Nil(err)
+				s.NoError(err)
 			}
 			s.Equal(tt.afterPoints, repo.points)
 		})
@@ -171,15 +169,14 @@ func (s *FileRepositoryTestSuite) Test_List() {
 	}
 	for _, tt := range tests {
 		s.Run(tt.name, func() {
-			repo := &FileRepository{}
-			repo.points = tt.points
+			repo := &FileRepository{points: tt.points}
 			points, err := repo.List(context.Background())
 			if tt.wantErr {
-				s.NotNil(err)
+				s.Error(err)
 				s.ErrorIs(err, tt.err)
 			} else {
-				s.Nil(err)
-				s.Equal(tt.want, points)
+				s.NoError(err)
+				s.ElementsMatch(tt.want, points)
 			}
 		})
 	}
@@ -214,14 +211,13 @@ func (s *FileRepositoryTestSuite) Test_Get() {
 	}
 	for _, tt := range tests {
 		s.Run(tt.name, func() {
-			repo := &FileRepository{}
-			repo.points = tt.points
+			repo := &FileRepository{points: tt.points}
 			point, err := repo.Get(context.Background(), tt.id)
 			if tt.wantErr {
-				s.NotNil(err)
+				s.Error(err)
 				s.ErrorIs(err, tt.err)
 			} else {
-				s.Nil(err)
+				s.NoError(err)
 				s.Equal(tt.want, point)
 			}
 		})
@@ -263,14 +259,13 @@ func (s *FileRepositoryTestSuite) Test_Update() {
 	}
 	for _, tt := range tests {
 		s.Run(tt.name, func() {
-			repo := &FileRepository{}
-			repo.points = tt.beforePoints
+			repo := &FileRepository{points: tt.beforePoints}
 			err := repo.Update(context.Background(), tt.point)
 			if tt.wantErr {
-				s.NotNil(err)
+				s.Error(err)
 				s.ErrorIs(err, tt.err)
 			} else {
-				s.Nil(err)
+				s.NoError(err)
 			}
 			s.Equal(tt.afterPoints, repo.points)
 		})
@@ -305,14 +300,13 @@ func (s *FileRepositoryTestSuite) Test_Delete() {
 	}
 	for _, tt := range tests {
 		s.Run(tt.name, func() {
-			repo := &FileRepository{}
-			repo.points = tt.beforePoints
+			repo := &FileRepository{points: tt.beforePoints}
 			err := repo.Delete(context.Background(), tt.id)
 			if tt.wantErr {
-				s.NotNil(err)
+				s.Error(err)
 				s.ErrorIs(err, tt.err)
 			} else {
-				s.Nil(err)
+				s.NoError(err)
 			}
 			s.Equal(tt.afterPoints, repo.points)
 		})

@@ -54,10 +54,10 @@ func (s *PostgresRepositoryTestSuite) Test_Create() {
 				Return(nil, tt.dbErr)
 			err := repo.Create(context.Background(), tt.point)
 			if tt.wantErr {
-				s.NotNil(err)
+				s.Error(err)
 				s.ErrorIs(err, tt.err)
 			} else {
-				s.Nil(err)
+				s.NoError(err)
 			}
 		})
 	}
@@ -96,10 +96,10 @@ func (s *PostgresRepositoryTestSuite) Test_List() {
 				})
 			point, err := repo.List(context.Background())
 			if tt.wantErr {
-				s.NotNil(err)
+				s.Error(err)
 				s.ErrorIs(err, tt.err)
 			} else {
-				s.Nil(err)
+				s.NoError(err)
 				s.Equal(tt.want, point)
 			}
 		})
@@ -150,10 +150,10 @@ func (s *PostgresRepositoryTestSuite) Test_Get() {
 				})
 			point, err := repo.Get(context.Background(), tt.id)
 			if tt.wantErr {
-				s.NotNil(err)
+				s.Error(err)
 				s.ErrorIs(err, tt.err)
 			} else {
-				s.Nil(err)
+				s.NoError(err)
 				s.Equal(tt.want, point)
 			}
 		})
@@ -202,10 +202,10 @@ func (s *PostgresRepositoryTestSuite) Test_Update() {
 				Return(tag, tt.dbErr)
 			err := repo.Update(context.Background(), tt.point)
 			if tt.wantErr {
-				s.NotNil(err)
+				s.Error(err)
 				s.ErrorIs(err, tt.err)
 			} else {
-				s.Nil(err)
+				s.NoError(err)
 			}
 		})
 	}
@@ -253,10 +253,10 @@ func (s *PostgresRepositoryTestSuite) Test_Delete() {
 				Return(tag, tt.dbErr)
 			err := repo.Delete(context.Background(), tt.id)
 			if tt.wantErr {
-				s.NotNil(err)
+				s.Error(err)
 				s.ErrorIs(err, tt.err)
 			} else {
-				s.Nil(err)
+				s.NoError(err)
 			}
 		})
 	}

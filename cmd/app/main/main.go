@@ -32,7 +32,7 @@ func run() error {
 		return nil
 	}
 
-	pointFileRepo, closePointFileRepo, err := initPickUpPointFileRepository()
+	pointFileRepo, closePointFileRepo, err := initPickUpPointFileRepository(POINTS_FILEPATH, filePerm)
 	if err != nil {
 		return err
 	}
@@ -54,7 +54,7 @@ func run() error {
 		helpCommand,
 	)
 
-	orderFileRepo, closeOrderFileRepo, err := initOrderFileRepository()
+	orderFileRepo, closeOrderFileRepo, err := initOrderFileRepository(ORDERS_FILEPATH, filePerm)
 	if err != nil {
 		return err
 	}
@@ -85,8 +85,8 @@ func run() error {
 	return commands.Run(cmdMap)
 }
 
-func initPickUpPointFileRepository() (*pickuppoint.FileRepository, func(), error) {
-	file, err := os.OpenFile(POINTS_FILEPATH, os.O_CREATE|os.O_RDONLY, filePerm)
+func initPickUpPointFileRepository(pointsFilePath string, filePerm os.FileMode) (*pickuppoint.FileRepository, func(), error) {
+	file, err := os.OpenFile(pointsFilePath, os.O_CREATE|os.O_RDONLY, filePerm)
 	if err != nil {
 		return nil, nil, err
 	}
@@ -115,8 +115,8 @@ func initPickUpPointFileRepository() (*pickuppoint.FileRepository, func(), error
 	return repo, f, nil
 }
 
-func initOrderFileRepository() (*order.FileRepository, func(), error) {
-	file, err := os.OpenFile(POINTS_FILEPATH, os.O_CREATE|os.O_RDONLY, filePerm)
+func initOrderFileRepository(orderFilePath string, filePerm os.FileMode) (*order.FileRepository, func(), error) {
+	file, err := os.OpenFile(orderFilePath, os.O_CREATE|os.O_RDONLY, filePerm)
 	if err != nil {
 		return nil, nil, err
 	}
