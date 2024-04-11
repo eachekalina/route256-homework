@@ -12,7 +12,7 @@ type UpdatePointRequest struct {
 	Contact string `json:"contact"`
 }
 
-func (s *PickUpPointCoreService) UpdatePoint(ctx context.Context, req UpdatePointRequest) error {
+func (s *pickUpPointCoreService) UpdatePoint(ctx context.Context, req UpdatePointRequest) error {
 	point := pickuppoint.PickUpPoint{
 		Id:      req.Id,
 		Name:    req.Name,

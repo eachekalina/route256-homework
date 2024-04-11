@@ -8,7 +8,7 @@ import (
 	"net/http"
 )
 
-func LogMiddleware(log *logger.Logger) mux.MiddlewareFunc {
+func LogMiddleware(log logger.Logger) mux.MiddlewareFunc {
 	return func(h http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, req *http.Request) {
 			var buf bytes.Buffer

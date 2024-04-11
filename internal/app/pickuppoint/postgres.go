@@ -10,11 +10,11 @@ import (
 
 // PostgresRepository provides a pick-up point Repository with a PostgreSQL database as a backend.
 type PostgresRepository struct {
-	db *db.Database
+	db db.Database
 }
 
 // NewPostgresRepository returns a new PostgresRepository with provided database.
-func NewPostgresRepository(db *db.Database) *PostgresRepository {
+func NewPostgresRepository(db db.Database) *PostgresRepository {
 	return &PostgresRepository{db: db}
 }
 

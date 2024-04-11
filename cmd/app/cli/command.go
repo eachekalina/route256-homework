@@ -11,12 +11,12 @@ import (
 )
 
 type PickUpPointCommands struct {
-	svc    *core.PickUpPointCoreService
-	log    *logger.Logger
+	svc    core.PickUpPointCoreService
+	log    logger.Logger
 	runner *rwthread.Runner
 }
 
-func NewPickUpPointCommands(svc *core.PickUpPointCoreService, log *logger.Logger, runner *rwthread.Runner) *PickUpPointCommands {
+func NewPickUpPointCommands(svc core.PickUpPointCoreService, log logger.Logger, runner *rwthread.Runner) *PickUpPointCommands {
 	return &PickUpPointCommands{
 		svc:    svc,
 		log:    log,

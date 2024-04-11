@@ -1,3 +1,5 @@
+//go:generate mockgen -source=./logger.go -destination=./mocks/logger.go -package=mocks
+
 package logger
 
 import (
@@ -5,15 +7,19 @@ import (
 	"fmt"
 )
 
-type Logger struct {
+type Logger interface {
+	Log(format string, a ...any)
+}
+
+type ThreadLogger struct {
 	out chan string
 }
 
-func NewLogger() *Logger {
-	return &Logger{}
+func NewLogger() *ThreadLogger {
+	return &ThreadLogger{}
 }
 
-func (l *Logger) Run(ctx context.Context) error {
+func (l *ThreadLogger) Run(ctx context.Context) error {
 	l.out = make(chan string, 128)
 	defer close(l.out)
 	for {
@@ -26,6 +32,6 @@ func (l *Logger) Run(ctx context.Context) error {
 	}
 }
 
-func (l *Logger) Log(format string, a ...any) {
+func (l *ThreadLogger) Log(format string, a ...any) {
 	l.out <- fmt.Sprintf(format, a...)
 }

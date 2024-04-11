@@ -9,12 +9,12 @@ import (
 type RunFunc func(ctx context.Context) error
 
 type Runner struct {
-	log   *logger.Logger
+	log   logger.Logger
 	read  chan RunFunc
 	write chan RunFunc
 }
 
-func NewRunner(log *logger.Logger) *Runner {
+func NewRunner(log logger.Logger) *Runner {
 	return &Runner{log: log}
 }
 

@@ -8,7 +8,7 @@ import (
 	"net/http"
 )
 
-type Handler func(req *http.Request) (int, []byte)
+type Handler func(req *http.Request, vars map[string]string) (int, []byte)
 
 type PathHandler struct {
 	Methods map[string]Handler
@@ -97,7 +97,7 @@ func (s *HttpServer) makeHandlerFunc(pathHandler PathHandler) http.HandlerFunc {
 		var body []byte
 		handler, ok := pathHandler.Methods[req.Method]
 		if ok {
-			code, body = handler(req)
+			code, body = handler(req, mux.Vars(req))
 		} else {
 			w.Header().Set("Allow", methods)
 			code = http.StatusMethodNotAllowed

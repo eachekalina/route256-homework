@@ -3,7 +3,6 @@ package httpserv
 import (
 	"encoding/json"
 	"errors"
-	"github.com/gorilla/mux"
 	"homework/internal/app/core"
 	"homework/internal/app/logger"
 	"homework/internal/app/pickuppoint"
@@ -13,15 +12,15 @@ import (
 )
 
 type PickUpPointHandlers struct {
-	svc *core.PickUpPointCoreService
-	log *logger.Logger
+	svc core.PickUpPointCoreService
+	log logger.Logger
 }
 
-func NewPickUpPointHandlers(svc *core.PickUpPointCoreService, log *logger.Logger) *PickUpPointHandlers {
+func NewPickUpPointHandlers(svc core.PickUpPointCoreService, log logger.Logger) *PickUpPointHandlers {
 	return &PickUpPointHandlers{svc: svc, log: log}
 }
 
-func (h *PickUpPointHandlers) CreateHandler(httpReq *http.Request) (int, []byte) {
+func (h *PickUpPointHandlers) CreateHandler(httpReq *http.Request, vars map[string]string) (int, []byte) {
 	body, err := io.ReadAll(httpReq.Body)
 	if err != nil {
 		h.log.Log("%v", err)
@@ -52,7 +51,7 @@ func (h *PickUpPointHandlers) CreateHandler(httpReq *http.Request) (int, []byte)
 	return http.StatusCreated, pointJson
 }
 
-func (h *PickUpPointHandlers) ListHandler(req *http.Request) (int, []byte) {
+func (h *PickUpPointHandlers) ListHandler(req *http.Request, vars map[string]string) (int, []byte) {
 	list, err := h.svc.ListPoints(req.Context())
 	if err != nil {
 		h.log.Log("%v", err)
@@ -68,8 +67,8 @@ func (h *PickUpPointHandlers) ListHandler(req *http.Request) (int, []byte) {
 	return http.StatusOK, listJson
 }
 
-func (h *PickUpPointHandlers) GetHandler(req *http.Request) (int, []byte) {
-	idStr, ok := mux.Vars(req)["id"]
+func (h *PickUpPointHandlers) GetHandler(req *http.Request, vars map[string]string) (int, []byte) {
+	idStr, ok := vars["id"]
 	if !ok {
 		return http.StatusBadRequest, nil
 	}
@@ -97,8 +96,8 @@ func (h *PickUpPointHandlers) GetHandler(req *http.Request) (int, []byte) {
 	return http.StatusOK, pointJson
 }
 
-func (h *PickUpPointHandlers) UpdateHandler(httpReq *http.Request) (int, []byte) {
-	idStr, ok := mux.Vars(httpReq)["id"]
+func (h *PickUpPointHandlers) UpdateHandler(httpReq *http.Request, vars map[string]string) (int, []byte) {
+	idStr, ok := vars["id"]
 	if !ok {
 		return http.StatusBadRequest, nil
 	}
@@ -142,8 +141,8 @@ func (h *PickUpPointHandlers) UpdateHandler(httpReq *http.Request) (int, []byte)
 	return http.StatusOK, pointJson
 }
 
-func (h *PickUpPointHandlers) DeleteHandler(req *http.Request) (int, []byte) {
-	idStr, ok := mux.Vars(req)["id"]
+func (h *PickUpPointHandlers) DeleteHandler(req *http.Request, vars map[string]string) (int, []byte) {
+	idStr, ok := vars["id"]
 	if !ok {
 		return http.StatusBadRequest, nil
 	}
