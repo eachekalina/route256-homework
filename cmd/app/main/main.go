@@ -17,7 +17,14 @@ const (
 	ORDERS_FILEPATH = "orders.json"
 	POINTS_FILEPATH = "points.json"
 	filePerm        = 0777
+	topic           = "requests"
 )
+
+var brokers = []string{
+	"127.0.0.1:9091",
+	"127.0.0.1:9092",
+	"127.0.0.1:9093",
+}
 
 func main() {
 	err := run()
@@ -52,6 +59,8 @@ func run() error {
 	apiCommands := commands.NewPickUpPointApiConsoleCommands(
 		core.NewPickUpPointCoreService(pickuppoint.NewService(pickuppoint.NewPostgresRepository(pointDb))),
 		helpCommand,
+		brokers,
+		topic,
 	)
 
 	orderFileRepo, closeOrderFileRepo, err := initOrderFileRepository(ORDERS_FILEPATH, filePerm)

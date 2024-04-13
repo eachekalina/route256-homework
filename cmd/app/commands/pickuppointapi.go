@@ -2,24 +2,30 @@ package commands
 
 import (
 	"context"
+	"errors"
 	"github.com/gorilla/mux"
 	"golang.org/x/sync/errgroup"
 	"homework/cmd/app/httpserv"
 	"homework/internal/app/core"
+	"homework/internal/app/kafka"
 	"homework/internal/app/logger"
 	"homework/internal/app/middleware"
+	"homework/internal/app/reqlog"
 	"net/http"
 	"os/signal"
 	"syscall"
+	"time"
 )
 
 type PickUpPointApiConsoleCommands struct {
-	svc  core.PickUpPointCoreService
-	help Command
+	svc     core.PickUpPointCoreService
+	help    Command
+	brokers []string
+	topic   string
 }
 
-func NewPickUpPointApiConsoleCommands(svc core.PickUpPointCoreService, help Command) *PickUpPointApiConsoleCommands {
-	return &PickUpPointApiConsoleCommands{svc: svc, help: help}
+func NewPickUpPointApiConsoleCommands(svc core.PickUpPointCoreService, help Command, brokers []string, topic string) *PickUpPointApiConsoleCommands {
+	return &PickUpPointApiConsoleCommands{svc: svc, help: help, brokers: brokers, topic: topic}
 }
 
 func (c *PickUpPointApiConsoleCommands) RunPickUpPointApi(args []string) error {
@@ -47,6 +53,26 @@ func (c *PickUpPointApiConsoleCommands) RunPickUpPointApi(args []string) error {
 	log := logger.NewLogger()
 	go log.Run(logCtx)
 
+	producer, err := kafka.NewProducer(c.brokers, log, c.topic)
+	if err != nil {
+		return err
+	}
+	defer producer.Close()
+	consumer, err := kafka.NewConsumer(c.brokers, c.topic, reqlog.LogHandler(log))
+	if err != nil {
+		return err
+	}
+	eg.Go(func() error {
+		return consumer.Run(ctx)
+	})
+	select {
+	case <-consumer.Ready():
+		log.Log("Consumer ready")
+	case <-time.After(5 * time.Second):
+		return errors.New("consumer failed: timeout")
+	}
+	reqLog := reqlog.NewLogger(producer, consumer)
+
 	handlers := httpserv.NewPickUpPointHandlers(c.svc, log)
 
 	params.Handlers = map[string]httpserv.PathHandler{
@@ -62,7 +88,7 @@ func (c *PickUpPointApiConsoleCommands) RunPickUpPointApi(args []string) error {
 	}
 
 	params.Middlewares = []mux.MiddlewareFunc{
-		middleware.LogMiddleware(log),
+		middleware.LogMiddleware(reqLog),
 		middleware.AuthMiddleware(username, password),
 	}
 
