@@ -13,24 +13,25 @@ import (
 	"homework/internal/app/reqlog"
 	"net/http"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 )
 
 type PickUpPointApiConsoleCommands struct {
-	svc     core.PickUpPointCoreService
-	help    Command
-	brokers []string
-	topic   string
+	svc   core.PickUpPointCoreService
+	help  Command
+	topic string
 }
 
-func NewPickUpPointApiConsoleCommands(svc core.PickUpPointCoreService, help Command, brokers []string, topic string) *PickUpPointApiConsoleCommands {
-	return &PickUpPointApiConsoleCommands{svc: svc, help: help, brokers: brokers, topic: topic}
+func NewPickUpPointApiConsoleCommands(svc core.PickUpPointCoreService, help Command, topic string) *PickUpPointApiConsoleCommands {
+	return &PickUpPointApiConsoleCommands{svc: svc, help: help, topic: topic}
 }
 
 func (c *PickUpPointApiConsoleCommands) RunPickUpPointApi(args []string) error {
 	var params httpserv.HttpServerParams
 	var username, password string
+	var brokersStr string
 
 	fs := createFlagSet(c.help)
 	fs.StringVar(&params.HttpsAddr, "https-address", ":9443", "specify https listen address")
@@ -39,10 +40,13 @@ func (c *PickUpPointApiConsoleCommands) RunPickUpPointApi(args []string) error {
 	fs.StringVar(&params.KeyFile, "tls-key", "server.key", "specify tls certificate key file")
 	fs.StringVar(&username, "username", "user", "specify access control username")
 	fs.StringVar(&password, "password", "testpassword", "specify access control password")
+	fs.StringVar(&brokersStr, "brokers", "127.0.0.1:9091,127.0.0.1:9092,127.0.0.1:9093", "specify broker addresses, separated by comma")
 	err := fs.Parse(args)
 	if err != nil {
 		return err
 	}
+
+	brokers := strings.Split(brokersStr, ",")
 
 	ctx, _ := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 
@@ -53,24 +57,27 @@ func (c *PickUpPointApiConsoleCommands) RunPickUpPointApi(args []string) error {
 	log := logger.NewLogger()
 	go log.Run(logCtx)
 
-	producer, err := kafka.NewProducer(c.brokers, log, c.topic)
+	producer, err := kafka.NewProducer(brokers, log, c.topic)
 	if err != nil {
 		return err
 	}
 	defer producer.Close()
-	consumer, err := kafka.NewConsumer(c.brokers, c.topic, reqlog.LogHandler(log))
+	consumer, err := kafka.NewConsumer(brokers, c.topic, reqlog.LogHandler(log))
 	if err != nil {
 		return err
 	}
 	eg.Go(func() error {
 		return consumer.Run(ctx)
 	})
+	t := time.NewTicker(5 * time.Second)
 	select {
 	case <-consumer.Ready():
 		log.Log("Consumer ready")
-	case <-time.After(5 * time.Second):
+	case <-t.C:
+		t.Stop()
 		return errors.New("consumer failed: timeout")
 	}
+	t.Stop()
 	reqLog := reqlog.NewLogger(producer, consumer)
 
 	handlers := httpserv.NewPickUpPointHandlers(c.svc, log)
