@@ -20,7 +20,7 @@ test-migration-down:
 
 .PHONY: run-test-environment
 run-test-environment:
-	docker compose up -d
+	docker compose up -d --wait
 
 .PHONY: stop-test-environment
 stop-test-environment:
@@ -32,8 +32,7 @@ run-unit-tests:
 
 .PHONY: run-integration-environment
 run-integration-environment:
-	docker compose -f docker-compose-integration.yaml up -d
-	sleep 5
+	docker compose -f docker-compose-integration.yaml up -d --wait
 	goose -dir "$(MIGRATION_FOLDER)" postgres "$(POSTGRES_INTEGRATION)" up
 
 .PHONY: stop-integration-environment
@@ -42,4 +41,5 @@ stop-integration-environment:
 
 .PHONY: run-integration-tests
 run-integration-tests:
+	go clean -testcache
 	DB_PORT=15432 go test -tags=integration ./...

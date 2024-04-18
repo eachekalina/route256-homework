@@ -17,6 +17,7 @@ const (
 	ORDERS_FILEPATH = "orders.json"
 	POINTS_FILEPATH = "points.json"
 	filePerm        = 0777
+	topic           = "requests"
 )
 
 func main() {
@@ -49,10 +50,7 @@ func run() error {
 	}
 	defer pointDb.Close()
 
-	apiCommands := commands.NewPickUpPointApiConsoleCommands(
-		core.NewPickUpPointCoreService(pickuppoint.NewService(pickuppoint.NewPostgresRepository(pointDb))),
-		helpCommand,
-	)
+	apiCommands := commands.NewPickUpPointApiConsoleCommands(core.NewPickUpPointCoreService(pickuppoint.NewService(pickuppoint.NewPostgresRepository(pointDb))), helpCommand, topic)
 
 	orderFileRepo, closeOrderFileRepo, err := initOrderFileRepository(ORDERS_FILEPATH, filePerm)
 	if err != nil {
@@ -162,6 +160,7 @@ func help() {
 		--tls-key			specify TLS certificate key file, default: server.key
 		--username			specify access control username, default: user
 		--password			specify access control password, default: testpassword
+		--brokers			specify broker addresses, separated by comma, default: 127.0.0.1:9091,127.0.0.1:9092,127.0.0.1:9093
 
 	accept-order --order-id <order-id> --customer-id <customer-id> --keep-date <keep-date> --price <price> --weight <weight>
 		Accepts order from a courier
