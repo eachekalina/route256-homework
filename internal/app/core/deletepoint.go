@@ -3,5 +3,10 @@ package core
 import "context"
 
 func (s *pickUpPointCoreService) DeletePoint(ctx context.Context, id uint64) error {
-	return s.pointService.DeletePoint(ctx, id)
+	err := s.pointService.DeletePoint(ctx, id)
+	if err != nil {
+		return err
+	}
+	s.cache.DeletePoint(id)
+	return nil
 }

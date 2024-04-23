@@ -28,6 +28,7 @@ stop-test-environment:
 
 .PHONY: run-unit-tests
 run-unit-tests:
+	go clean -testcache
 	go test ./...
 
 .PHONY: run-integration-environment

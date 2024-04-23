@@ -13,10 +13,25 @@ type PickUpPointCoreService interface {
 	GetPoint(ctx context.Context, id uint64) (pickuppoint.PickUpPoint, error)
 	UpdatePoint(ctx context.Context, req UpdatePointRequest) error
 	DeletePoint(ctx context.Context, id uint64) error
+	SetCache(cache Cache)
+	SetRedis(redis Redis)
+}
+
+type Cache interface {
+	PutPoint(point pickuppoint.PickUpPoint)
+	GetPoint(id uint64) (pickuppoint.PickUpPoint, error)
+	DeletePoint(id uint64)
+}
+
+type Redis interface {
+	GetPointList(ctx context.Context) ([]pickuppoint.PickUpPoint, error)
+	SetPointList(ctx context.Context, points []pickuppoint.PickUpPoint) error
 }
 
 type pickUpPointCoreService struct {
 	pointService PickUpPointService
+	cache        Cache
+	redis        Redis
 }
 
 type PickUpPointService interface {
@@ -28,5 +43,13 @@ type PickUpPointService interface {
 }
 
 func NewPickUpPointCoreService(pointService PickUpPointService) PickUpPointCoreService {
-	return &pickUpPointCoreService{pointService: pointService}
+	return &pickUpPointCoreService{pointService: pointService, cache: NilCache{}, redis: NilRedis{}}
+}
+
+func (s *pickUpPointCoreService) SetCache(cache Cache) {
+	s.cache = cache
+}
+
+func (s *pickUpPointCoreService) SetRedis(redis Redis) {
+	s.redis = redis
 }

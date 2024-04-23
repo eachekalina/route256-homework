@@ -17,12 +17,12 @@ const (
 	defaultDbName   = "test"
 )
 
-func NewDb(ctx context.Context) (*PostgresDatabase, error) {
+func NewTransactionManager(ctx context.Context) (*TransactionManager, error) {
 	pool, err := pgxpool.Connect(ctx, generateDsn())
 	if err != nil {
 		return nil, err
 	}
-	return newDatabase(pool), nil
+	return newTransactionManager(pool), nil
 }
 
 func getEnv(key string, defaultValue string) string {

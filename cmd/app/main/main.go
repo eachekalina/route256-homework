@@ -40,17 +40,16 @@ func run() error {
 	defer closePointFileRepo()
 
 	cliCommands := commands.NewPickUpPointCliConsoleCommands(
-		core.NewPickUpPointCoreService(pickuppoint.NewService(pointFileRepo)),
+		core.NewPickUpPointCoreService(pickuppoint.NewService(pointFileRepo, db.Dummy{})),
 		helpCommand,
 	)
 
-	pointDb, err := db.NewDb(context.Background())
+	tm, err := db.NewTransactionManager(context.Background())
 	if err != nil {
 		return err
 	}
-	defer pointDb.Close()
 
-	apiCommands := commands.NewPickUpPointApiConsoleCommands(core.NewPickUpPointCoreService(pickuppoint.NewService(pickuppoint.NewPostgresRepository(pointDb))), helpCommand, topic)
+	apiCommands := commands.NewPickUpPointApiConsoleCommands(core.NewPickUpPointCoreService(pickuppoint.NewService(pickuppoint.NewPostgresRepository(db.NewDatabase(tm)), tm)), helpCommand, topic)
 
 	orderFileRepo, closeOrderFileRepo, err := initOrderFileRepository(ORDERS_FILEPATH, filePerm)
 	if err != nil {

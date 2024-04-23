@@ -4,12 +4,15 @@ import (
 	"context"
 	"errors"
 	"github.com/gorilla/mux"
+	"github.com/redis/go-redis/v9"
 	"golang.org/x/sync/errgroup"
 	"homework/cmd/app/httpserv"
+	"homework/internal/app/cache"
 	"homework/internal/app/core"
 	"homework/internal/app/kafka"
 	"homework/internal/app/logger"
 	"homework/internal/app/middleware"
+	rediscli "homework/internal/app/redis"
 	"homework/internal/app/reqlog"
 	"net/http"
 	"os/signal"
@@ -32,6 +35,8 @@ func (c *PickUpPointApiConsoleCommands) RunPickUpPointApi(args []string) error {
 	var params httpserv.HttpServerParams
 	var username, password string
 	var brokersStr string
+	var ttl, collectorInterval time.Duration
+	var redisOptions redis.Options
 
 	fs := createFlagSet(c.help)
 	fs.StringVar(&params.HttpsAddr, "https-address", ":9443", "specify https listen address")
@@ -41,6 +46,11 @@ func (c *PickUpPointApiConsoleCommands) RunPickUpPointApi(args []string) error {
 	fs.StringVar(&username, "username", "user", "specify access control username")
 	fs.StringVar(&password, "password", "testpassword", "specify access control password")
 	fs.StringVar(&brokersStr, "brokers", "127.0.0.1:9091,127.0.0.1:9092,127.0.0.1:9093", "specify broker addresses, separated by comma")
+	fs.DurationVar(&ttl, "cache-ttl", time.Minute, "specify cache TTL (time-to-live)")
+	fs.DurationVar(&collectorInterval, "cache-collector-interval", 10*time.Minute, "specify cache collector interval")
+	fs.StringVar(&redisOptions.Addr, "redis-host", "localhost:6379", "specify Redis host")
+	fs.StringVar(&redisOptions.Password, "redis-password", "my-password", "specify Redis password")
+	fs.IntVar(&redisOptions.DB, "redis-db", 0, "specify Redis database")
 	err := fs.Parse(args)
 	if err != nil {
 		return err
@@ -79,6 +89,15 @@ func (c *PickUpPointApiConsoleCommands) RunPickUpPointApi(args []string) error {
 	}
 	t.Stop()
 	reqLog := reqlog.NewLogger(producer, consumer)
+
+	inMemoryCache := cache.NewCache(ttl, collectorInterval)
+	eg.Go(func() error {
+		return inMemoryCache.Run(ctx)
+	})
+	c.svc.SetCache(inMemoryCache)
+
+	redisClient := rediscli.NewRedis(&redisOptions, ttl)
+	c.svc.SetRedis(redisClient)
 
 	handlers := httpserv.NewPickUpPointHandlers(c.svc, log)
 

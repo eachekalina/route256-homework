@@ -99,6 +99,30 @@ func (mr *MockPickUpPointCoreServiceMockRecorder) ListPoints(ctx any) *gomock.Ca
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "ListPoints", reflect.TypeOf((*MockPickUpPointCoreService)(nil).ListPoints), ctx)
 }
 
+// SetCache mocks base method.
+func (m *MockPickUpPointCoreService) SetCache(cache core.Cache) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetCache", cache)
+}
+
+// SetCache indicates an expected call of SetCache.
+func (mr *MockPickUpPointCoreServiceMockRecorder) SetCache(cache any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetCache", reflect.TypeOf((*MockPickUpPointCoreService)(nil).SetCache), cache)
+}
+
+// SetRedis mocks base method.
+func (m *MockPickUpPointCoreService) SetRedis(redis core.Redis) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "SetRedis", redis)
+}
+
+// SetRedis indicates an expected call of SetRedis.
+func (mr *MockPickUpPointCoreServiceMockRecorder) SetRedis(redis any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetRedis", reflect.TypeOf((*MockPickUpPointCoreService)(nil).SetRedis), redis)
+}
+
 // UpdatePoint mocks base method.
 func (m *MockPickUpPointCoreService) UpdatePoint(ctx context.Context, req core.UpdatePointRequest) error {
 	m.ctrl.T.Helper()
@@ -111,6 +135,120 @@ func (m *MockPickUpPointCoreService) UpdatePoint(ctx context.Context, req core.U
 func (mr *MockPickUpPointCoreServiceMockRecorder) UpdatePoint(ctx, req any) *gomock.Call {
 	mr.mock.ctrl.T.Helper()
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "UpdatePoint", reflect.TypeOf((*MockPickUpPointCoreService)(nil).UpdatePoint), ctx, req)
+}
+
+// MockCache is a mock of Cache interface.
+type MockCache struct {
+	ctrl     *gomock.Controller
+	recorder *MockCacheMockRecorder
+}
+
+// MockCacheMockRecorder is the mock recorder for MockCache.
+type MockCacheMockRecorder struct {
+	mock *MockCache
+}
+
+// NewMockCache creates a new mock instance.
+func NewMockCache(ctrl *gomock.Controller) *MockCache {
+	mock := &MockCache{ctrl: ctrl}
+	mock.recorder = &MockCacheMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockCache) EXPECT() *MockCacheMockRecorder {
+	return m.recorder
+}
+
+// DeletePoint mocks base method.
+func (m *MockCache) DeletePoint(id uint64) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "DeletePoint", id)
+}
+
+// DeletePoint indicates an expected call of DeletePoint.
+func (mr *MockCacheMockRecorder) DeletePoint(id any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "DeletePoint", reflect.TypeOf((*MockCache)(nil).DeletePoint), id)
+}
+
+// GetPoint mocks base method.
+func (m *MockCache) GetPoint(id uint64) (pickuppoint.PickUpPoint, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetPoint", id)
+	ret0, _ := ret[0].(pickuppoint.PickUpPoint)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetPoint indicates an expected call of GetPoint.
+func (mr *MockCacheMockRecorder) GetPoint(id any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPoint", reflect.TypeOf((*MockCache)(nil).GetPoint), id)
+}
+
+// PutPoint mocks base method.
+func (m *MockCache) PutPoint(point pickuppoint.PickUpPoint) {
+	m.ctrl.T.Helper()
+	m.ctrl.Call(m, "PutPoint", point)
+}
+
+// PutPoint indicates an expected call of PutPoint.
+func (mr *MockCacheMockRecorder) PutPoint(point any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "PutPoint", reflect.TypeOf((*MockCache)(nil).PutPoint), point)
+}
+
+// MockRedis is a mock of Redis interface.
+type MockRedis struct {
+	ctrl     *gomock.Controller
+	recorder *MockRedisMockRecorder
+}
+
+// MockRedisMockRecorder is the mock recorder for MockRedis.
+type MockRedisMockRecorder struct {
+	mock *MockRedis
+}
+
+// NewMockRedis creates a new mock instance.
+func NewMockRedis(ctrl *gomock.Controller) *MockRedis {
+	mock := &MockRedis{ctrl: ctrl}
+	mock.recorder = &MockRedisMockRecorder{mock}
+	return mock
+}
+
+// EXPECT returns an object that allows the caller to indicate expected use.
+func (m *MockRedis) EXPECT() *MockRedisMockRecorder {
+	return m.recorder
+}
+
+// GetPointList mocks base method.
+func (m *MockRedis) GetPointList(ctx context.Context) ([]pickuppoint.PickUpPoint, error) {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "GetPointList", ctx)
+	ret0, _ := ret[0].([]pickuppoint.PickUpPoint)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetPointList indicates an expected call of GetPointList.
+func (mr *MockRedisMockRecorder) GetPointList(ctx any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPointList", reflect.TypeOf((*MockRedis)(nil).GetPointList), ctx)
+}
+
+// SetPointList mocks base method.
+func (m *MockRedis) SetPointList(ctx context.Context, points []pickuppoint.PickUpPoint) error {
+	m.ctrl.T.Helper()
+	ret := m.ctrl.Call(m, "SetPointList", ctx, points)
+	ret0, _ := ret[0].(error)
+	return ret0
+}
+
+// SetPointList indicates an expected call of SetPointList.
+func (mr *MockRedisMockRecorder) SetPointList(ctx, points any) *gomock.Call {
+	mr.mock.ctrl.T.Helper()
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "SetPointList", reflect.TypeOf((*MockRedis)(nil).SetPointList), ctx, points)
 }
 
 // MockPickUpPointService is a mock of PickUpPointService interface.

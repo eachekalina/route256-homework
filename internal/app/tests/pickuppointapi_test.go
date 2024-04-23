@@ -25,12 +25,13 @@ type PickUpPointApiIntegrationTestSuite struct {
 
 func (s *PickUpPointApiIntegrationTestSuite) SetupSuite() {
 	var err error
-	s.db, err = db.NewDb(context.Background())
+	tm, err := db.NewTransactionManager(context.Background())
 	if err != nil {
 		panic(err)
 	}
+	s.db = db.NewDatabase(tm)
 	repo := pickuppoint.NewPostgresRepository(s.db)
-	svc := pickuppoint.NewService(repo)
+	svc := pickuppoint.NewService(repo, tm)
 	coreSvc := core.NewPickUpPointCoreService(svc)
 	log := logger.NewLogger()
 	var ctx context.Context
@@ -41,7 +42,6 @@ func (s *PickUpPointApiIntegrationTestSuite) SetupSuite() {
 
 func (s *PickUpPointApiIntegrationTestSuite) TearDownSuite() {
 	s.stopLog()
-	s.db.Close()
 }
 
 func (s *PickUpPointApiIntegrationTestSuite) SetupTest() {

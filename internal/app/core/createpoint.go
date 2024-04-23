@@ -19,5 +19,10 @@ func (s *pickUpPointCoreService) CreatePoint(ctx context.Context, req CreatePoin
 		Address: req.Address,
 		Contact: req.Contact,
 	}
-	return s.pointService.CreatePoint(ctx, point)
+	err := s.pointService.CreatePoint(ctx, point)
+	if err != nil {
+		return err
+	}
+	s.cache.PutPoint(point)
+	return nil
 }
