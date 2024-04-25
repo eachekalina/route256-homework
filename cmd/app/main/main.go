@@ -49,7 +49,11 @@ func run() error {
 		return err
 	}
 
-	apiCommands := commands.NewPickUpPointApiConsoleCommands(core.NewPickUpPointCoreService(pickuppoint.NewService(pickuppoint.NewPostgresRepository(db.NewDatabase(tm)), tm)), helpCommand, topic)
+	apiCoreService := core.NewPickUpPointCoreService(pickuppoint.NewService(pickuppoint.NewPostgresRepository(db.NewDatabase(tm)), tm))
+
+	apiCommands := commands.NewPickUpPointApiConsoleCommands(apiCoreService, helpCommand, topic)
+
+	grpcCommands := commands.NewPickUpPointGrpcConsoleCommands(apiCoreService, helpCommand)
 
 	orderFileRepo, closeOrderFileRepo, err := initOrderFileRepository(ORDERS_FILEPATH, filePerm)
 	if err != nil {
@@ -69,15 +73,16 @@ func run() error {
 	)
 
 	cmdMap := map[string]commands.Command{
-		"help":                  helpCommand,
-		"manage-pickup-points":  cliCommands.ManagePickUpPointsCommand,
-		"run-pickup-points-api": apiCommands.RunPickUpPointApi,
-		"accept-order":          orderCommands.AcceptOrderCommand,
-		"return-order":          orderCommands.ReturnOrderCommand,
-		"give-orders":           orderCommands.GiveOrdersCommand,
-		"list-orders":           orderCommands.ListOrdersCommand,
-		"accept-return":         orderCommands.AcceptReturnCommand,
-		"list-returns":          orderCommands.ListReturnsCommand,
+		"help":                   helpCommand,
+		"manage-pickup-points":   cliCommands.ManagePickUpPointsCommand,
+		"run-pickup-points-api":  apiCommands.RunPickUpPointApi,
+		"run-pickup-points-grpc": grpcCommands.RunPickUpPointGrpcApi,
+		"accept-order":           orderCommands.AcceptOrderCommand,
+		"return-order":           orderCommands.ReturnOrderCommand,
+		"give-orders":            orderCommands.GiveOrdersCommand,
+		"list-orders":            orderCommands.ListOrdersCommand,
+		"accept-return":          orderCommands.AcceptReturnCommand,
+		"list-returns":           orderCommands.ListReturnsCommand,
 	}
 	return commands.Run(cmdMap)
 }
@@ -160,6 +165,10 @@ func help() {
 		--username			specify access control username, default: user
 		--password			specify access control password, default: testpassword
 		--brokers			specify broker addresses, separated by comma, default: 127.0.0.1:9091,127.0.0.1:9092,127.0.0.1:9093
+
+	run-pickup-points-grpc
+		Starts a gRPC API server for managing pick-up points
+		--listen-address	specify listen address, default: :9090
 
 	accept-order --order-id <order-id> --customer-id <customer-id> --keep-date <keep-date> --price <price> --weight <weight>
 		Accepts order from a courier

@@ -44,3 +44,8 @@ stop-integration-environment:
 run-integration-tests:
 	go clean -testcache
 	DB_PORT=15432 go test -tags=integration ./...
+
+.PHONY: generate-proto
+generate-proto:
+	protoc --proto_path=api --go_out=internal/app/pb --go-grpc_out=internal/app/pb api/*.proto
+

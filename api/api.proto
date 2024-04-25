@@ -1,0 +1,55 @@
+syntax = "proto3";
+
+package pickuppoint;
+option go_package = "./;pb";
+
+service PickUpPointService {
+  rpc Create(PickUpPointCreateRequest) returns (PickUpPointCreateResult) {}
+  rpc List(PickUpPointListRequest) returns (PickUpPointListResult) {}
+  rpc Get(PickUpPointGetRequest) returns (PickUpPointGetResult) {}
+  rpc Update(PickUpPointUpdateRequest) returns (PickUpPointUpdateResult) {}
+  rpc Delete(PickUpPointDeleteRequest) returns (PickUpPointDeleteResult) {}
+}
+
+message PickUpPoint {
+  uint64 id = 1;
+  string name = 2;
+  string address = 3;
+  string contact = 4;
+}
+
+message PickUpPointCreateRequest {
+  PickUpPoint point = 1;
+}
+
+message PickUpPointCreateResult {
+}
+
+message PickUpPointListRequest {
+}
+
+message PickUpPointListResult {
+  repeated PickUpPoint points = 1;
+}
+
+message PickUpPointGetRequest {
+  uint64 id = 1;
+}
+
+message PickUpPointGetResult {
+  PickUpPoint point = 1;
+}
+
+message PickUpPointUpdateRequest {
+  PickUpPoint point = 1;
+}
+
+message PickUpPointUpdateResult {
+}
+
+message PickUpPointDeleteRequest {
+  uint64 id = 1;
+}
+
+message PickUpPointDeleteResult {
+}
