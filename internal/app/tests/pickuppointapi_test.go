@@ -32,11 +32,11 @@ func (s *PickUpPointApiIntegrationTestSuite) SetupSuite() {
 	s.db = db.NewDatabase(tm)
 	repo := pickuppoint.NewPostgresRepository(s.db)
 	svc := pickuppoint.NewService(repo, tm)
-	coreSvc := core.NewPickUpPointCoreService(svc)
 	log := logger.NewLogger()
 	var ctx context.Context
 	ctx, s.stopLog = context.WithCancel(context.Background())
 	go log.Run(ctx)
+	coreSvc := core.NewPickUpPointCoreService(svc, log)
 	s.h = httpserv.NewPickUpPointHandlers(coreSvc, log)
 }
 

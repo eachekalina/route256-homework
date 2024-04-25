@@ -8,8 +8,9 @@ import (
 func (s *pickUpPointCoreService) ListPoints(ctx context.Context) ([]pickuppoint.PickUpPoint, error) {
 	points, err := s.redis.GetPointList(ctx)
 	if err == nil {
-		return points, err
+		return points, nil
 	}
+	s.log.Log(err.Error())
 	points, err = s.pointService.ListPoints(ctx)
 	if err != nil {
 		return nil, err

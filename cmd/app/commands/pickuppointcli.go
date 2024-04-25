@@ -13,6 +13,7 @@ import (
 
 type PickUpPointCliConsoleCommands struct {
 	svc  core.PickUpPointCoreService
+	log  logger.Logger
 	help Command
 }
 
@@ -31,18 +32,12 @@ func (c *PickUpPointCliConsoleCommands) ManagePickUpPointsCommand(args []string)
 
 	eg, ctx := errgroup.WithContext(ctx)
 
-	logCtx, stopLog := context.WithCancel(context.Background())
-	defer stopLog()
-
-	log := logger.NewLogger()
-	go log.Run(logCtx)
-
-	runner := rwthread.NewRunner(log)
+	runner := rwthread.NewRunner(c.log)
 	eg.Go(func() error {
 		return runner.Run(ctx)
 	})
 
-	cmds := cli.NewPickUpPointCommands(c.svc, log, runner)
+	cmds := cli.NewPickUpPointCommands(c.svc, c.log, runner)
 	cmdMap := map[string]cli.Command{
 		"help":   cmds.HelpCommand,
 		"exit":   cmds.ExitCommand,

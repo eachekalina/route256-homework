@@ -6,6 +6,7 @@ import (
 	"homework/cmd/app/commands"
 	"homework/internal/app/core"
 	"homework/internal/app/db"
+	"homework/internal/app/logger"
 	"homework/internal/app/order"
 	"homework/internal/app/packaging"
 	"homework/internal/app/pickuppoint"
@@ -33,6 +34,11 @@ func run() error {
 		return nil
 	}
 
+	logCtx, stopLog := context.WithCancel(context.Background())
+	defer stopLog()
+	log := logger.NewLogger()
+	go log.Run(logCtx)
+
 	pointFileRepo, closePointFileRepo, err := initPickUpPointFileRepository(POINTS_FILEPATH, filePerm)
 	if err != nil {
 		return err
@@ -40,7 +46,7 @@ func run() error {
 	defer closePointFileRepo()
 
 	cliCommands := commands.NewPickUpPointCliConsoleCommands(
-		core.NewPickUpPointCoreService(pickuppoint.NewService(pointFileRepo, db.Dummy{})),
+		core.NewPickUpPointCoreService(pickuppoint.NewService(pointFileRepo, db.Dummy{}), log),
 		helpCommand,
 	)
 
@@ -49,7 +55,7 @@ func run() error {
 		return err
 	}
 
-	apiCommands := commands.NewPickUpPointApiConsoleCommands(core.NewPickUpPointCoreService(pickuppoint.NewService(pickuppoint.NewPostgresRepository(db.NewDatabase(tm)), tm)), helpCommand, topic)
+	apiCommands := commands.NewPickUpPointApiConsoleCommands(core.NewPickUpPointCoreService(pickuppoint.NewService(pickuppoint.NewPostgresRepository(db.NewDatabase(tm)), tm), log), log, helpCommand, topic)
 
 	orderFileRepo, closeOrderFileRepo, err := initOrderFileRepository(ORDERS_FILEPATH, filePerm)
 	if err != nil {

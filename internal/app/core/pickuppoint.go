@@ -4,6 +4,7 @@ package core
 
 import (
 	"context"
+	"homework/internal/app/logger"
 	"homework/internal/app/pickuppoint"
 )
 
@@ -30,6 +31,7 @@ type Redis interface {
 
 type pickUpPointCoreService struct {
 	pointService PickUpPointService
+	log          logger.Logger
 	cache        Cache
 	redis        Redis
 }
@@ -42,8 +44,8 @@ type PickUpPointService interface {
 	DeletePoint(ctx context.Context, id uint64) error
 }
 
-func NewPickUpPointCoreService(pointService PickUpPointService) PickUpPointCoreService {
-	return &pickUpPointCoreService{pointService: pointService, cache: NilCache{}, redis: NilRedis{}}
+func NewPickUpPointCoreService(pointService PickUpPointService, log logger.Logger) PickUpPointCoreService {
+	return &pickUpPointCoreService{pointService: pointService, log: log, cache: NilCache{}, redis: NilRedis{}}
 }
 
 func (s *pickUpPointCoreService) SetCache(cache Cache) {
