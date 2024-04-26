@@ -23,12 +23,13 @@ import (
 
 type PickUpPointApiConsoleCommands struct {
 	svc   core.PickUpPointCoreService
+	log   logger.Logger
 	help  Command
 	topic string
 }
 
-func NewPickUpPointApiConsoleCommands(svc core.PickUpPointCoreService, help Command, topic string) *PickUpPointApiConsoleCommands {
-	return &PickUpPointApiConsoleCommands{svc: svc, help: help, topic: topic}
+func NewPickUpPointApiConsoleCommands(svc core.PickUpPointCoreService, log logger.Logger, help Command, topic string) *PickUpPointApiConsoleCommands {
+	return &PickUpPointApiConsoleCommands{svc: svc, log: log, help: help, topic: topic}
 }
 
 func (c *PickUpPointApiConsoleCommands) RunPickUpPointApi(args []string) error {
@@ -62,17 +63,12 @@ func (c *PickUpPointApiConsoleCommands) RunPickUpPointApi(args []string) error {
 
 	eg, ctx := errgroup.WithContext(ctx)
 
-	logCtx, stopLog := context.WithCancel(context.Background())
-	defer stopLog()
-	log := logger.NewLogger()
-	go log.Run(logCtx)
-
-	producer, err := kafka.NewProducer(brokers, log, c.topic)
+	producer, err := kafka.NewProducer(brokers, c.log, c.topic)
 	if err != nil {
 		return err
 	}
 	defer producer.Close()
-	consumer, err := kafka.NewConsumer(brokers, c.topic, reqlog.LogHandler(log))
+	consumer, err := kafka.NewConsumer(brokers, c.topic, reqlog.LogHandler(c.log))
 	if err != nil {
 		return err
 	}
@@ -82,7 +78,7 @@ func (c *PickUpPointApiConsoleCommands) RunPickUpPointApi(args []string) error {
 	t := time.NewTicker(5 * time.Second)
 	select {
 	case <-consumer.Ready():
-		log.Log("Consumer ready")
+		c.log.Log("Consumer ready")
 	case <-t.C:
 		t.Stop()
 		return errors.New("consumer failed: timeout")
@@ -99,7 +95,7 @@ func (c *PickUpPointApiConsoleCommands) RunPickUpPointApi(args []string) error {
 	redisClient := rediscli.NewRedis(&redisOptions, ttl)
 	c.svc.SetRedis(redisClient)
 
-	handlers := httpserv.NewPickUpPointHandlers(c.svc, log)
+	handlers := httpserv.NewPickUpPointHandlers(c.svc, c.log)
 
 	params.Handlers = map[string]httpserv.PathHandler{
 		"/pickup-point": {Methods: map[string]httpserv.Handler{
