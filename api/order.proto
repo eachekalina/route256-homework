@@ -1,0 +1,78 @@
+syntax = "proto3";
+
+package order;
+option go_package = "./;pb";
+
+import "google/protobuf/timestamp.proto";
+
+service OrderService {
+  rpc AcceptOrder(AcceptOrderRequest) returns (AcceptOrderResult) {}
+  rpc ReturnOrder(ReturnOrderRequest) returns (ReturnOrderResult) {}
+  rpc GiveOrders(GiveOrdersRequest) returns (GiveOrdersResult) {}
+  rpc ListOrders(ListOrdersRequest) returns (ListOrdersResult) {}
+  rpc AcceptReturn(AcceptReturnRequest) returns (AcceptReturnResult) {}
+  rpc ListReturns(ListReturnsRequest) returns (ListReturnsResponse) {}
+}
+
+message Order {
+  google.protobuf.Timestamp give_date = 1;
+  google.protobuf.Timestamp return_date = 2;
+  google.protobuf.Timestamp keep_date = 3;
+  google.protobuf.Timestamp add_date = 4;
+  uint64 id = 5;
+  uint64 customer_id = 6;
+  int64 price_rub = 7;
+  double weight_kg = 8;
+  bool is_given = 9;
+  bool is_returned = 10;
+}
+
+message AcceptOrderRequest {
+  uint64 order_id = 1;
+  uint64 customer_id = 2;
+  google.protobuf.Timestamp keep_date = 3;
+  int64 price = 4;
+  double weight_kg = 5;
+  string packaging = 6;
+}
+
+message AcceptOrderResult {
+}
+
+message ReturnOrderRequest {
+  uint64 order_id = 1;
+}
+
+message ReturnOrderResult {
+}
+
+message GiveOrdersRequest {
+  repeated uint64 order_ids = 1;
+}
+
+message GiveOrdersResult {
+}
+
+message ListOrdersRequest {
+  uint64 customer_id = 1;
+  bool stored_only = 2;
+}
+
+message ListOrdersResult {
+  repeated Order orders = 1;
+}
+
+message AcceptReturnRequest {
+  uint64 customer_id = 1;
+  uint64 order_id = 2;
+}
+
+message AcceptReturnResult {
+}
+
+message ListReturnsRequest {
+}
+
+message ListReturnsResponse {
+  repeated Order returns = 1;
+}

@@ -5,6 +5,7 @@ go 1.21
 require (
 	github.com/IBM/sarama v1.43.1
 	github.com/georgysavva/scany v1.2.1
+	github.com/golang/protobuf v1.5.4
 	github.com/gorilla/mux v1.8.1
 	github.com/jackc/pgconn v1.14.3
 	github.com/jackc/pgx/v4 v4.18.2

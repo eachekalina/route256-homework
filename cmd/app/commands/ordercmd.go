@@ -1,13 +1,17 @@
 package commands
 
 import (
+	"errors"
 	"fmt"
 	"homework/internal/app/core"
 	"homework/internal/app/order"
 	"os"
 	"strconv"
 	"text/tabwriter"
+	"time"
 )
+
+const dateFormat = "2006-01-02"
 
 type OrderConsoleCommands struct {
 	svc  *core.OrderCoreService
@@ -20,11 +24,12 @@ func NewOrderConsoleCommands(svc *core.OrderCoreService, help Command) *OrderCon
 
 func (c *OrderConsoleCommands) AcceptOrderCommand(args []string) error {
 	var req core.AcceptOrderRequest
+	var keepDateString string
 
 	fs := createFlagSet(c.help)
 	fs.Uint64Var(&req.OrderId, "order-id", 0, "specify order id")
 	fs.Uint64Var(&req.CustomerId, "customer-id", 0, "specify customer id")
-	fs.StringVar(&req.KeepDateString, "keep-date", "", "specify keep date")
+	fs.StringVar(&keepDateString, "keep-date", "", "specify keep date")
 	fs.Int64Var(&req.PriceRub, "price", 0, "specify price in rubles")
 	fs.Float64Var(&req.WeightKg, "weight", 0.0, "specify weight in kg")
 	fs.StringVar(&req.PackagingType, "packaging", "", "specify packaging")
@@ -32,6 +37,16 @@ func (c *OrderConsoleCommands) AcceptOrderCommand(args []string) error {
 	if err != nil {
 		return err
 	}
+
+	if keepDateString == "" {
+		return errors.New("keep date is required")
+	}
+	keepDate, err := time.ParseInLocation(dateFormat, keepDateString, time.Local)
+	if err != nil {
+		return err
+	}
+	keepDate = keepDate.Add(23*time.Hour + 59*time.Minute + 59*time.Second)
+	req.KeepDate = keepDate
 
 	return c.svc.AcceptOrder(req)
 }

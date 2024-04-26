@@ -13,16 +13,17 @@ import (
 	"syscall"
 )
 
-type PickUpPointGrpcConsoleCommands struct {
-	svc  core.PickUpPointCoreService
-	help Command
+type GrpcConsoleCommands struct {
+	pointSvc core.PickUpPointCoreService
+	orderSvc *core.OrderCoreService
+	help     Command
 }
 
-func NewPickUpPointGrpcConsoleCommands(svc core.PickUpPointCoreService, help Command) *PickUpPointGrpcConsoleCommands {
-	return &PickUpPointGrpcConsoleCommands{svc: svc, help: help}
+func NewGrpcConsoleCommands(pointSvc core.PickUpPointCoreService, orderSvc *core.OrderCoreService, help Command) *GrpcConsoleCommands {
+	return &GrpcConsoleCommands{pointSvc: pointSvc, orderSvc: orderSvc, help: help}
 }
 
-func (c *PickUpPointGrpcConsoleCommands) RunPickUpPointGrpcApi(args []string) error {
+func (c *GrpcConsoleCommands) RunGrpcApi(args []string) error {
 	var listenAddr string
 
 	fs := createFlagSet(c.help)
@@ -42,10 +43,12 @@ func (c *PickUpPointGrpcConsoleCommands) RunPickUpPointGrpcApi(args []string) er
 	log := logger.NewLogger()
 	go log.Run(logCtx)
 
-	handler := grpchandler.NewService(c.svc, log)
+	pointHandler := grpchandler.NewPickUpPointService(c.pointSvc, log)
+	orderHandler := grpchandler.NewOrderService(c.orderSvc, log)
 
 	serv := grpc.NewServer()
-	pb.RegisterPickUpPointServiceServer(serv, handler)
+	pb.RegisterPickUpPointServiceServer(serv, pointHandler)
+	pb.RegisterOrderServiceServer(serv, orderHandler)
 
 	ctx, _ := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	eg, ctx := errgroup.WithContext(ctx)
@@ -53,6 +56,9 @@ func (c *PickUpPointGrpcConsoleCommands) RunPickUpPointGrpcApi(args []string) er
 	eg.Go(func() error {
 		return serv.Serve(lis)
 	})
+
+	<-ctx.Done()
+	serv.GracefulStop()
 
 	return eg.Wait()
 }

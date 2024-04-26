@@ -11,17 +11,17 @@ import (
 	"homework/internal/app/pickuppoint"
 )
 
-type Service struct {
+type PickUpPointService struct {
 	pb.UnimplementedPickUpPointServiceServer
 	svc core.PickUpPointCoreService
 	log logger.Logger
 }
 
-func NewService(svc core.PickUpPointCoreService, log logger.Logger) *Service {
-	return &Service{svc: svc, log: log}
+func NewPickUpPointService(svc core.PickUpPointCoreService, log logger.Logger) *PickUpPointService {
+	return &PickUpPointService{svc: svc, log: log}
 }
 
-func (s *Service) Create(ctx context.Context, pbReq *pb.PickUpPointCreateRequest) (*pb.PickUpPointCreateResult, error) {
+func (s *PickUpPointService) Create(ctx context.Context, pbReq *pb.PickUpPointCreateRequest) (*pb.PickUpPointCreateResult, error) {
 	req := core.CreatePointRequest{
 		Id:      pbReq.Point.Id,
 		Name:    pbReq.Point.Name,
@@ -41,7 +41,7 @@ func (s *Service) Create(ctx context.Context, pbReq *pb.PickUpPointCreateRequest
 	return &pb.PickUpPointCreateResult{}, nil
 }
 
-func (s *Service) List(ctx context.Context, pbReq *pb.PickUpPointListRequest) (*pb.PickUpPointListResult, error) {
+func (s *PickUpPointService) List(ctx context.Context, pbReq *pb.PickUpPointListRequest) (*pb.PickUpPointListResult, error) {
 	list, err := s.svc.ListPoints(ctx)
 	if err != nil {
 		s.log.Log("%v", err)
@@ -60,7 +60,7 @@ func (s *Service) List(ctx context.Context, pbReq *pb.PickUpPointListRequest) (*
 	return res, nil
 }
 
-func (s *Service) Get(ctx context.Context, pbReq *pb.PickUpPointGetRequest) (*pb.PickUpPointGetResult, error) {
+func (s *PickUpPointService) Get(ctx context.Context, pbReq *pb.PickUpPointGetRequest) (*pb.PickUpPointGetResult, error) {
 	point, err := s.svc.GetPoint(ctx, pbReq.Id)
 	if err != nil {
 		if errors.Is(err, pickuppoint.ErrNoItemFound) {
@@ -78,7 +78,7 @@ func (s *Service) Get(ctx context.Context, pbReq *pb.PickUpPointGetRequest) (*pb
 	return res, nil
 }
 
-func (s *Service) Update(ctx context.Context, pbReq *pb.PickUpPointUpdateRequest) (*pb.PickUpPointUpdateResult, error) {
+func (s *PickUpPointService) Update(ctx context.Context, pbReq *pb.PickUpPointUpdateRequest) (*pb.PickUpPointUpdateResult, error) {
 	req := core.UpdatePointRequest{
 		Id:      pbReq.Point.Id,
 		Name:    pbReq.Point.Name,
@@ -96,7 +96,7 @@ func (s *Service) Update(ctx context.Context, pbReq *pb.PickUpPointUpdateRequest
 	return &pb.PickUpPointUpdateResult{}, nil
 }
 
-func (s *Service) Delete(ctx context.Context, pbReq *pb.PickUpPointDeleteRequest) (*pb.PickUpPointDeleteResult, error) {
+func (s *PickUpPointService) Delete(ctx context.Context, pbReq *pb.PickUpPointDeleteRequest) (*pb.PickUpPointDeleteResult, error) {
 	err := s.svc.DeletePoint(ctx, pbReq.Id)
 	if err != nil {
 		if errors.Is(err, pickuppoint.ErrNoItemFound) {

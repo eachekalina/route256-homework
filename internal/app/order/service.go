@@ -17,6 +17,14 @@ type Repository interface {
 var ErrIdAlreadyExists = errors.New("item with such id already exists")
 var ErrNoItemFound = errors.New("no such item found")
 
+type ValidationError struct {
+	Err string
+}
+
+func (v ValidationError) Error() string {
+	return v.Err
+}
+
 // Service provides methods to work with orders.
 type Service struct {
 	repo Repository
@@ -39,10 +47,10 @@ func (s *Service) RemoveOrder(id uint64) error {
 		return err
 	}
 	if order.IsGiven && !order.IsReturned {
-		return errors.New("order has already been given to customer")
+		return ValidationError{Err: "order has already been given to customer"}
 	}
 	if order.KeepDate.After(time.Now()) {
-		return errors.New("keep date has not arrived yet")
+		return ValidationError{Err: "keep date has not arrived yet"}
 	}
 	err = s.repo.Delete(id)
 	return err
@@ -59,15 +67,15 @@ func (s *Service) GiveOrders(ids []uint64) error {
 			return err
 		}
 		if order.IsGiven {
-			return errors.New("order has already been given")
+			return ValidationError{Err: "order has already been given"}
 		}
 		if order.KeepDate.Before(now) {
-			return errors.New("keep date has already expired")
+			return ValidationError{Err: "keep date has already expired"}
 		}
 		if i == 0 {
 			customerId = order.CustomerId
 		} else if order.CustomerId != customerId {
-			return errors.New("orders belong to different customers")
+			return ValidationError{Err: "orders belong to different customers"}
 		}
 		orders[i] = order
 	}
@@ -117,18 +125,18 @@ func (s *Service) AcceptReturn(orderId uint64, customerId uint64) error {
 		return err
 	}
 	if order.CustomerId != customerId {
-		return errors.New("order does not belong to customer")
+		return ValidationError{Err: "order does not belong to customer"}
 	}
 	if !order.IsGiven {
-		return errors.New("order was not given")
+		return ValidationError{Err: "order was not given"}
 	}
 	if order.IsReturned {
-		return errors.New("order was already returned")
+		return ValidationError{Err: "order was already returned"}
 	}
 	now := time.Now()
 	returnExpirationDate := order.GiveDate.AddDate(0, 0, 2)
 	if returnExpirationDate.Before(now) {
-		return errors.New("too much time passed since give")
+		return ValidationError{Err: "too much time passed since give"}
 	}
 	order.IsReturned = true
 	order.ReturnDate = now
@@ -158,7 +166,7 @@ func (s *Service) GetReturns(count int, pageNum int) ([]Order, error) {
 		return orders, nil
 	}
 	if pageNum*count >= len(orders) {
-		return nil, errors.New("page number is too large")
+		return nil, ValidationError{Err: "page number is too large"}
 	}
 	if (pageNum+1)*count > len(orders) {
 		return orders[pageNum*count:], nil

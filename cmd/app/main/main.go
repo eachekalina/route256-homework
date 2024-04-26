@@ -53,8 +53,6 @@ func run() error {
 
 	apiCommands := commands.NewPickUpPointApiConsoleCommands(apiCoreService, helpCommand, topic)
 
-	grpcCommands := commands.NewPickUpPointGrpcConsoleCommands(apiCoreService, helpCommand)
-
 	orderFileRepo, closeOrderFileRepo, err := initOrderFileRepository(ORDERS_FILEPATH, filePerm)
 	if err != nil {
 		return err
@@ -67,22 +65,26 @@ func run() error {
 		packaging.FilmType: packaging.Film{},
 	}
 
+	orderCoreService := core.NewOrderCoreService(order.NewService(orderFileRepo), packagingTypes)
+
+	grpcCommands := commands.NewGrpcConsoleCommands(apiCoreService, orderCoreService, helpCommand)
+
 	orderCommands := commands.NewOrderConsoleCommands(
-		core.NewOrderCoreService(order.NewService(orderFileRepo), packagingTypes),
+		orderCoreService,
 		helpCommand,
 	)
 
 	cmdMap := map[string]commands.Command{
-		"help":                   helpCommand,
-		"manage-pickup-points":   cliCommands.ManagePickUpPointsCommand,
-		"run-pickup-points-api":  apiCommands.RunPickUpPointApi,
-		"run-pickup-points-grpc": grpcCommands.RunPickUpPointGrpcApi,
-		"accept-order":           orderCommands.AcceptOrderCommand,
-		"return-order":           orderCommands.ReturnOrderCommand,
-		"give-orders":            orderCommands.GiveOrdersCommand,
-		"list-orders":            orderCommands.ListOrdersCommand,
-		"accept-return":          orderCommands.AcceptReturnCommand,
-		"list-returns":           orderCommands.ListReturnsCommand,
+		"help":                  helpCommand,
+		"manage-pickup-points":  cliCommands.ManagePickUpPointsCommand,
+		"run-pickup-points-api": apiCommands.RunPickUpPointApi,
+		"run-grpc":              grpcCommands.RunGrpcApi,
+		"accept-order":          orderCommands.AcceptOrderCommand,
+		"return-order":          orderCommands.ReturnOrderCommand,
+		"give-orders":           orderCommands.GiveOrdersCommand,
+		"list-orders":           orderCommands.ListOrdersCommand,
+		"accept-return":         orderCommands.AcceptReturnCommand,
+		"list-returns":          orderCommands.ListReturnsCommand,
 	}
 	return commands.Run(cmdMap)
 }
@@ -166,8 +168,8 @@ func help() {
 		--password			specify access control password, default: testpassword
 		--brokers			specify broker addresses, separated by comma, default: 127.0.0.1:9091,127.0.0.1:9092,127.0.0.1:9093
 
-	run-pickup-points-grpc
-		Starts a gRPC API server for managing pick-up points
+	run-grpc
+		Starts a gRPC API server
 		--listen-address	specify listen address, default: :9090
 
 	accept-order --order-id <order-id> --customer-id <customer-id> --keep-date <keep-date> --price <price> --weight <weight>
