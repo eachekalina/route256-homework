@@ -4,6 +4,8 @@ package core
 
 import (
 	"context"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/trace"
 	"homework/internal/app/logger"
 	"homework/internal/app/pickuppoint"
 )
@@ -19,9 +21,9 @@ type PickUpPointCoreService interface {
 }
 
 type Cache interface {
-	PutPoint(point pickuppoint.PickUpPoint)
-	GetPoint(id uint64) (pickuppoint.PickUpPoint, error)
-	DeletePoint(id uint64)
+	PutPoint(ctx context.Context, point pickuppoint.PickUpPoint)
+	GetPoint(ctx context.Context, id uint64) (pickuppoint.PickUpPoint, error)
+	DeletePoint(ctx context.Context, id uint64)
 }
 
 type Redis interface {
@@ -34,6 +36,7 @@ type pickUpPointCoreService struct {
 	log          logger.Logger
 	cache        Cache
 	redis        Redis
+	tracer       trace.Tracer
 }
 
 type PickUpPointService interface {
@@ -45,7 +48,13 @@ type PickUpPointService interface {
 }
 
 func NewPickUpPointCoreService(pointService PickUpPointService, log logger.Logger) PickUpPointCoreService {
-	return &pickUpPointCoreService{pointService: pointService, log: log, cache: NilCache{}, redis: NilRedis{}}
+	return &pickUpPointCoreService{
+		pointService: pointService,
+		log:          log,
+		cache:        NilCache{},
+		redis:        NilRedis{},
+		tracer:       otel.Tracer("internal/app/core/pickuppoint"),
+	}
 }
 
 func (s *pickUpPointCoreService) SetCache(cache Cache) {

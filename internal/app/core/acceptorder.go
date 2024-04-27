@@ -1,6 +1,7 @@
 package core
 
 import (
+	"context"
 	"homework/internal/app/order"
 	"homework/internal/app/packaging"
 	"time"
@@ -15,7 +16,10 @@ type AcceptOrderRequest struct {
 	PackagingType string
 }
 
-func (s *OrderCoreService) AcceptOrder(req AcceptOrderRequest) error {
+func (s *OrderCoreService) AcceptOrder(ctx context.Context, req AcceptOrderRequest) error {
+	ctx, span := s.tracer.Start(ctx, "AcceptOrder")
+	defer span.End()
+
 	if req.OrderId == 0 {
 		return ValidationError{Err: "valid order id is required"}
 	}
@@ -62,5 +66,5 @@ func (s *OrderCoreService) AcceptOrder(req AcceptOrderRequest) error {
 			return err
 		}
 	}
-	return s.orderService.AddOrder(o)
+	return s.orderService.AddOrder(ctx, o)
 }

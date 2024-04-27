@@ -13,6 +13,9 @@ type CreatePointRequest struct {
 }
 
 func (s *pickUpPointCoreService) CreatePoint(ctx context.Context, req CreatePointRequest) error {
+	ctx, span := s.tracer.Start(ctx, "CreatePoint")
+	defer span.End()
+
 	point := pickuppoint.PickUpPoint{
 		Id:      req.Id,
 		Name:    req.Name,
@@ -23,6 +26,6 @@ func (s *pickUpPointCoreService) CreatePoint(ctx context.Context, req CreatePoin
 	if err != nil {
 		return err
 	}
-	s.cache.PutPoint(point)
+	s.cache.PutPoint(ctx, point)
 	return nil
 }

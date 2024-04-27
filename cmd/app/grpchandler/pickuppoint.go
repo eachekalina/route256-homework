@@ -3,6 +3,8 @@ package grpchandler
 import (
 	"context"
 	"errors"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"homework/internal/app/core"
@@ -13,15 +15,19 @@ import (
 
 type PickUpPointService struct {
 	pb.UnimplementedPickUpPointServiceServer
-	svc core.PickUpPointCoreService
-	log logger.Logger
+	svc    core.PickUpPointCoreService
+	log    logger.Logger
+	tracer trace.Tracer
 }
 
 func NewPickUpPointService(svc core.PickUpPointCoreService, log logger.Logger) *PickUpPointService {
-	return &PickUpPointService{svc: svc, log: log}
+	return &PickUpPointService{svc: svc, log: log, tracer: otel.Tracer("cmd/app/grpchandler/pickuppoint")}
 }
 
 func (s *PickUpPointService) Create(ctx context.Context, pbReq *pb.PickUpPointCreateRequest) (*pb.PickUpPointCreateResult, error) {
+	ctx, span := s.tracer.Start(ctx, "Create")
+	defer span.End()
+
 	req := core.CreatePointRequest{
 		Id:      pbReq.Point.Id,
 		Name:    pbReq.Point.Name,
@@ -42,6 +48,9 @@ func (s *PickUpPointService) Create(ctx context.Context, pbReq *pb.PickUpPointCr
 }
 
 func (s *PickUpPointService) List(ctx context.Context, pbReq *pb.PickUpPointListRequest) (*pb.PickUpPointListResult, error) {
+	ctx, span := s.tracer.Start(ctx, "List")
+	defer span.End()
+
 	list, err := s.svc.ListPoints(ctx)
 	if err != nil {
 		s.log.Log("%v", err)
@@ -61,6 +70,9 @@ func (s *PickUpPointService) List(ctx context.Context, pbReq *pb.PickUpPointList
 }
 
 func (s *PickUpPointService) Get(ctx context.Context, pbReq *pb.PickUpPointGetRequest) (*pb.PickUpPointGetResult, error) {
+	ctx, span := s.tracer.Start(ctx, "Get")
+	defer span.End()
+
 	point, err := s.svc.GetPoint(ctx, pbReq.Id)
 	if err != nil {
 		if errors.Is(err, pickuppoint.ErrNoItemFound) {
@@ -79,6 +91,9 @@ func (s *PickUpPointService) Get(ctx context.Context, pbReq *pb.PickUpPointGetRe
 }
 
 func (s *PickUpPointService) Update(ctx context.Context, pbReq *pb.PickUpPointUpdateRequest) (*pb.PickUpPointUpdateResult, error) {
+	ctx, span := s.tracer.Start(ctx, "Update")
+	defer span.End()
+
 	req := core.UpdatePointRequest{
 		Id:      pbReq.Point.Id,
 		Name:    pbReq.Point.Name,
@@ -97,6 +112,9 @@ func (s *PickUpPointService) Update(ctx context.Context, pbReq *pb.PickUpPointUp
 }
 
 func (s *PickUpPointService) Delete(ctx context.Context, pbReq *pb.PickUpPointDeleteRequest) (*pb.PickUpPointDeleteResult, error) {
+	ctx, span := s.tracer.Start(ctx, "Delete")
+	defer span.End()
+
 	err := s.svc.DeletePoint(ctx, pbReq.Id)
 	if err != nil {
 		if errors.Is(err, pickuppoint.ErrNoItemFound) {

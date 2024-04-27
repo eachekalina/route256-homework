@@ -6,7 +6,10 @@ import (
 )
 
 func (s *pickUpPointCoreService) GetPoint(ctx context.Context, id uint64) (pickuppoint.PickUpPoint, error) {
-	point, err := s.cache.GetPoint(id)
+	ctx, span := s.tracer.Start(ctx, "GetPoint")
+	defer span.End()
+
+	point, err := s.cache.GetPoint(ctx, id)
 	if err == nil {
 		return point, nil
 	}

@@ -13,6 +13,9 @@ type UpdatePointRequest struct {
 }
 
 func (s *pickUpPointCoreService) UpdatePoint(ctx context.Context, req UpdatePointRequest) error {
+	ctx, span := s.tracer.Start(ctx, "UpdatePoint")
+	defer span.End()
+
 	point := pickuppoint.PickUpPoint{
 		Id:      req.Id,
 		Name:    req.Name,
@@ -23,6 +26,6 @@ func (s *pickUpPointCoreService) UpdatePoint(ctx context.Context, req UpdatePoin
 	if err != nil {
 		return err
 	}
-	s.cache.PutPoint(point)
+	s.cache.PutPoint(ctx, point)
 	return nil
 }

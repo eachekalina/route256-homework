@@ -3,26 +3,34 @@ package grpchandler
 import (
 	"context"
 	"errors"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/trace"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 	"google.golang.org/protobuf/types/known/timestamppb"
 	"homework/internal/app/core"
 	"homework/internal/app/logger"
+	"homework/internal/app/metrics"
 	"homework/internal/app/order"
 	"homework/internal/app/pb"
 )
 
 type OrderService struct {
 	pb.UnimplementedOrderServiceServer
-	svc *core.OrderCoreService
-	log logger.Logger
+	svc    *core.OrderCoreService
+	log    logger.Logger
+	metric *metrics.Metrics
+	tracer trace.Tracer
 }
 
-func NewOrderService(svc *core.OrderCoreService, log logger.Logger) *OrderService {
-	return &OrderService{svc: svc, log: log}
+func NewOrderService(svc *core.OrderCoreService, log logger.Logger, metric *metrics.Metrics) *OrderService {
+	return &OrderService{svc: svc, log: log, metric: metric, tracer: otel.Tracer("cmd/app/grpchandler/order")}
 }
 
 func (s *OrderService) AcceptOrder(ctx context.Context, pbReq *pb.AcceptOrderRequest) (*pb.AcceptOrderResult, error) {
+	ctx, span := s.tracer.Start(ctx, "AcceptOrder")
+	defer span.End()
+
 	req := core.AcceptOrderRequest{
 		OrderId:       pbReq.OrderId,
 		CustomerId:    pbReq.CustomerId,
@@ -31,7 +39,7 @@ func (s *OrderService) AcceptOrder(ctx context.Context, pbReq *pb.AcceptOrderReq
 		WeightKg:      pbReq.WeightKg,
 		PackagingType: pbReq.Packaging,
 	}
-	err := s.svc.AcceptOrder(req)
+	err := s.svc.AcceptOrder(ctx, req)
 	if err != nil {
 		if errors.As(err, &core.ValidationError{}) {
 			return nil, status.Errorf(codes.InvalidArgument, err.Error())
@@ -46,7 +54,10 @@ func (s *OrderService) AcceptOrder(ctx context.Context, pbReq *pb.AcceptOrderReq
 }
 
 func (s *OrderService) ReturnOrder(ctx context.Context, pbReq *pb.ReturnOrderRequest) (*pb.ReturnOrderResult, error) {
-	err := s.svc.ReturnOrder(pbReq.OrderId)
+	ctx, span := s.tracer.Start(ctx, "ReturnOrder")
+	defer span.End()
+
+	err := s.svc.ReturnOrder(ctx, pbReq.OrderId)
 	if err != nil {
 		if errors.As(err, &core.ValidationError{}) {
 			return nil, status.Errorf(codes.InvalidArgument, err.Error())
@@ -61,7 +72,10 @@ func (s *OrderService) ReturnOrder(ctx context.Context, pbReq *pb.ReturnOrderReq
 }
 
 func (s *OrderService) GiveOrders(ctx context.Context, pbReq *pb.GiveOrdersRequest) (*pb.GiveOrdersResult, error) {
-	err := s.svc.GiveOrders(pbReq.OrderIds)
+	ctx, span := s.tracer.Start(ctx, "GiveOrders")
+	defer span.End()
+
+	orders, err := s.svc.GiveOrders(ctx, pbReq.OrderIds)
 	if err != nil {
 		if errors.As(err, &core.ValidationError{}) {
 			return nil, status.Errorf(codes.InvalidArgument, err.Error())
@@ -72,16 +86,23 @@ func (s *OrderService) GiveOrders(ctx context.Context, pbReq *pb.GiveOrdersReque
 		s.log.Log("%v", err)
 		return nil, status.Errorf(codes.Internal, err.Error())
 	}
+	s.metric.OrdersGiven.Add(float64(len(pbReq.OrderIds)))
+	for _, o := range orders {
+		s.metric.TimeBeforeGiven.Observe(o.GiveDate.Sub(o.AddDate).Seconds())
+	}
 	return &pb.GiveOrdersResult{}, nil
 }
 
 func (s *OrderService) ListOrders(ctx context.Context, pbReq *pb.ListOrdersRequest) (*pb.ListOrdersResult, error) {
+	ctx, span := s.tracer.Start(ctx, "ListOrders")
+	defer span.End()
+
 	req := core.ListOrdersRequest{
 		CustomerId:   pbReq.CustomerId,
 		DisplayCount: 0,
 		FilterGiven:  pbReq.StoredOnly,
 	}
-	orders, err := s.svc.ListOrders(req)
+	orders, err := s.svc.ListOrders(ctx, req)
 	if err != nil {
 		if errors.As(err, &core.ValidationError{}) {
 			return nil, status.Errorf(codes.InvalidArgument, err.Error())
@@ -118,11 +139,14 @@ func (s *OrderService) ListOrders(ctx context.Context, pbReq *pb.ListOrdersReque
 }
 
 func (s *OrderService) AcceptReturn(ctx context.Context, pbReq *pb.AcceptReturnRequest) (*pb.AcceptReturnResult, error) {
+	ctx, span := s.tracer.Start(ctx, "AcceptReturn")
+	defer span.End()
+
 	req := core.AcceptReturnRequest{
 		OrderId:    pbReq.OrderId,
 		CustomerId: pbReq.CustomerId,
 	}
-	err := s.svc.AcceptReturn(req)
+	o, err := s.svc.AcceptReturn(ctx, req)
 	if err != nil {
 		if errors.As(err, &core.ValidationError{}) {
 			return nil, status.Errorf(codes.InvalidArgument, err.Error())
@@ -133,15 +157,20 @@ func (s *OrderService) AcceptReturn(ctx context.Context, pbReq *pb.AcceptReturnR
 		s.log.Log("%v", err)
 		return nil, status.Errorf(codes.Internal, err.Error())
 	}
+	s.metric.OrdersReturned.Add(1)
+	s.metric.TimeBeforeReturn.Observe(o.ReturnDate.Sub(o.GiveDate).Seconds())
 	return &pb.AcceptReturnResult{}, nil
 }
 
 func (s *OrderService) ListReturns(ctx context.Context, pbReq *pb.ListReturnsRequest) (*pb.ListReturnsResponse, error) {
+	ctx, span := s.tracer.Start(ctx, "ListReturns")
+	defer span.End()
+
 	req := core.ListReturnsRequest{
 		Count:   0,
 		PageNum: 0,
 	}
-	returns, err := s.svc.ListReturns(req)
+	returns, err := s.svc.ListReturns(ctx, req)
 	if err != nil {
 		if errors.As(err, &core.ValidationError{}) {
 			return nil, status.Errorf(codes.InvalidArgument, err.Error())

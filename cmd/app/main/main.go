@@ -177,6 +177,7 @@ func help() {
 	run-grpc
 		Starts a gRPC API server
 		--listen-address	specify listen address, default: :9090
+		--tracing-address	specify tracing host address, default: localhost:16686
 
 	accept-order --order-id <order-id> --customer-id <customer-id> --keep-date <keep-date> --price <price> --weight <weight>
 		Accepts order from a courier

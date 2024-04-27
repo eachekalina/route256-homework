@@ -6,6 +6,9 @@ import (
 )
 
 func (s *pickUpPointCoreService) ListPoints(ctx context.Context) ([]pickuppoint.PickUpPoint, error) {
+	ctx, span := s.tracer.Start(ctx, "ListPoints")
+	defer span.End()
+
 	points, err := s.redis.GetPointList(ctx)
 	if err == nil {
 		return points, nil

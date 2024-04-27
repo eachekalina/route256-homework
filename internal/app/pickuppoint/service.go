@@ -3,6 +3,8 @@ package pickuppoint
 import (
 	"context"
 	"errors"
+	"go.opentelemetry.io/otel"
+	"go.opentelemetry.io/otel/trace"
 )
 
 type Repository interface {
@@ -22,20 +24,25 @@ var ErrNoItemFound = errors.New("no such item found")
 
 // Service allows concurrent working on pick-up points.
 type Service struct {
-	repo Repository
-	tm   TransactionManager
+	repo   Repository
+	tm     TransactionManager
+	tracer trace.Tracer
 }
 
 // NewService creates a new Service.
 func NewService(repo Repository, tm TransactionManager) *Service {
 	return &Service{
-		repo: repo,
-		tm:   tm,
+		repo:   repo,
+		tm:     tm,
+		tracer: otel.Tracer("internal/app/pickuppoint/service"),
 	}
 }
 
 // CreatePoint creates a pick-up point.
 func (s *Service) CreatePoint(ctx context.Context, point PickUpPoint) error {
+	ctx, span := s.tracer.Start(ctx, "CreatePoint")
+	defer span.End()
+
 	return s.tm.RunSerializable(ctx, func(ctxTX context.Context) error {
 		return s.repo.Create(ctxTX, point)
 	})
@@ -43,6 +50,9 @@ func (s *Service) CreatePoint(ctx context.Context, point PickUpPoint) error {
 
 // ListPoints prints a slice of all pick-up points.
 func (s *Service) ListPoints(ctx context.Context) ([]PickUpPoint, error) {
+	ctx, span := s.tracer.Start(ctx, "ListPoints")
+	defer span.End()
+
 	var points []PickUpPoint
 	err := s.tm.RunSerializable(ctx, func(ctxTX context.Context) error {
 		var err error
@@ -54,6 +64,9 @@ func (s *Service) ListPoints(ctx context.Context) ([]PickUpPoint, error) {
 
 // GetPoint prints a specified pick-up point.
 func (s *Service) GetPoint(ctx context.Context, id uint64) (PickUpPoint, error) {
+	ctx, span := s.tracer.Start(ctx, "GetPoint")
+	defer span.End()
+
 	var point PickUpPoint
 	err := s.tm.RunSerializable(ctx, func(ctxTX context.Context) error {
 		var err error
@@ -65,6 +78,9 @@ func (s *Service) GetPoint(ctx context.Context, id uint64) (PickUpPoint, error) 
 
 // UpdatePoint updates a pick-up point info.
 func (s *Service) UpdatePoint(ctx context.Context, point PickUpPoint) error {
+	ctx, span := s.tracer.Start(ctx, "UpdatePoint")
+	defer span.End()
+
 	return s.tm.RunSerializable(ctx, func(ctxTX context.Context) error {
 		return s.repo.Update(ctxTX, point)
 	})
@@ -72,6 +88,9 @@ func (s *Service) UpdatePoint(ctx context.Context, point PickUpPoint) error {
 
 // DeletePoint deletes a pick-up point.
 func (s *Service) DeletePoint(ctx context.Context, id uint64) error {
+	ctx, span := s.tracer.Start(ctx, "DeletePoint")
+	defer span.End()
+
 	return s.tm.RunSerializable(ctx, func(ctxTX context.Context) error {
 		return s.repo.Delete(ctxTX, id)
 	})

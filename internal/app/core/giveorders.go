@@ -1,18 +1,22 @@
 package core
 
 import (
+	"context"
 	"errors"
 	"homework/internal/app/order"
 )
 
 // GiveOrders marks orders represented by provided ids as given to customer.
-func (s *OrderCoreService) GiveOrders(orderIds []uint64) error {
+func (s *OrderCoreService) GiveOrders(ctx context.Context, orderIds []uint64) ([]order.Order, error) {
+	ctx, span := s.tracer.Start(ctx, "GiveOrders")
+	defer span.End()
+
 	if orderIds == nil {
-		return ValidationError{Err: "list of valid ids is required"}
+		return nil, ValidationError{Err: "list of valid ids is required"}
 	}
-	err := s.orderService.GiveOrders(orderIds)
+	orders, err := s.orderService.GiveOrders(ctx, orderIds)
 	if errors.As(err, &order.ValidationError{}) {
-		return ValidationError{Err: err.Error()}
+		return nil, ValidationError{Err: err.Error()}
 	}
-	return err
+	return orders, err
 }

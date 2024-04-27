@@ -1,6 +1,7 @@
 package commands
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"homework/internal/app/core"
@@ -48,7 +49,7 @@ func (c *OrderConsoleCommands) AcceptOrderCommand(args []string) error {
 	keepDate = keepDate.Add(23*time.Hour + 59*time.Minute + 59*time.Second)
 	req.KeepDate = keepDate
 
-	return c.svc.AcceptOrder(req)
+	return c.svc.AcceptOrder(context.Background(), req)
 }
 
 func (c *OrderConsoleCommands) ReturnOrderCommand(args []string) error {
@@ -61,7 +62,7 @@ func (c *OrderConsoleCommands) ReturnOrderCommand(args []string) error {
 		return err
 	}
 
-	return c.svc.ReturnOrder(id)
+	return c.svc.ReturnOrder(context.Background(), id)
 }
 
 func (c *OrderConsoleCommands) GiveOrdersCommand(args []string) error {
@@ -80,7 +81,8 @@ func (c *OrderConsoleCommands) GiveOrdersCommand(args []string) error {
 			return err
 		}
 	}
-	return c.svc.GiveOrders(ids)
+	_, err = c.svc.GiveOrders(context.Background(), ids)
+	return err
 }
 
 func (c *OrderConsoleCommands) ListOrdersCommand(args []string) error {
@@ -95,7 +97,7 @@ func (c *OrderConsoleCommands) ListOrdersCommand(args []string) error {
 		return err
 	}
 
-	orders, err := c.svc.ListOrders(req)
+	orders, err := c.svc.ListOrders(context.Background(), req)
 	if err != nil {
 		return err
 	}
@@ -118,7 +120,8 @@ func (c *OrderConsoleCommands) AcceptReturnCommand(args []string) error {
 		return err
 	}
 
-	return c.svc.AcceptReturn(req)
+	_, err = c.svc.AcceptReturn(context.Background(), req)
+	return err
 }
 
 func (c *OrderConsoleCommands) ListReturnsCommand(args []string) error {
@@ -132,7 +135,7 @@ func (c *OrderConsoleCommands) ListReturnsCommand(args []string) error {
 		return err
 	}
 
-	orders, err := c.svc.ListReturns(req)
+	orders, err := c.svc.ListReturns(context.Background(), req)
 	if err != nil {
 		return err
 	}
